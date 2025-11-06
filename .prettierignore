@@ -1,0 +1,32 @@
+# Dependencies
+node_modules
+**/node_modules
+
+# Build outputs
+dist
+.next
+build
+out
+*.tsbuildinfo
+
+# Lockfiles
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Generated files
+coverage
+playwright-report
+test-results
+
+# Configuration files that should not be formatted
+.env*
+*.md
+LICENSE
+
+# Infrastructure
+terraform.tfvars
+*.tfstate
+*.tfstate.backup
+.terraform
+example
