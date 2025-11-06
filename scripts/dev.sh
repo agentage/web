@@ -16,7 +16,7 @@ export BACKEND_API_URL="http://localhost:3001"
 # Load secrets from .env file if available (selectively, without overriding NODE_ENV)
 if [[ -f ".env" ]]; then
     echo "📄 Loading secrets from .env file..."
-    export $(grep -E "^(JWT_SECRET|JWT_EXPIRES_IN|GITHUB_CLIENT_ID|GITHUB_CLIENT_SECRET|GITHUB_CALLBACK_URL|GOOGLE_CLIENT_ID|GOOGLE_CLIENT_SECRET|GOOGLE_CALLBACK_URL|MONGODB_URL|DATABASE_URL)=" .env | xargs)
+    export $(grep -E "^(JWT_SECRET|JWT_EXPIRES_IN|GITHUB_CLIENT_ID|GITHUB_CLIENT_SECRET|GITHUB_CALLBACK_URL|GOOGLE_CLIENT_ID|GOOGLE_CLIENT_SECRET|GOOGLE_CALLBACK_URL|MONGODB_URL|DATABASE_URL)=" .env | xargs) > /dev/null 2>&1
 fi
 
 # Build shared package first
