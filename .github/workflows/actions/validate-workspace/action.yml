@@ -1,0 +1,113 @@
+name: 'Validate Workspace'
+description: 'Comprehensive workspace validation - install, lint, type-check, and build all packages'
+inputs:
+  node-version:
+    description: 'Node.js version to use'
+    required: false
+    default: '20'
+  skip-install:
+    description: 'Skip dependency installation'
+    required: false
+    default: 'false'
+  skip-lint:
+    description: 'Skip linting'
+    required: false
+    default: 'false'
+  skip-build:
+    description: 'Skip build'
+    required: false
+    default: 'false'
+outputs:
+  pr-comment-body:
+    description: 'Complete PR comment body text'
+    value: ${{ steps.summary.outputs.comment-body }}
+  validation-result:
+    description: 'Overall validation result'
+    value: ${{ steps.summary.outputs.result }}
+runs:
+  using: composite
+  steps:
+    - name: 📋 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: 'npm'
+
+    - name: 📦 Install dependencies
+      id: install
+      if: inputs.skip-install != 'true'
+      shell: bash
+      run: |
+        echo "📦 Installing all workspace dependencies..."
+        npm ci
+        echo "✅ Dependencies installed successfully"
+
+    - name: 🔍 Run linting
+      id: lint
+      if: inputs.skip-lint != 'true'
+      shell: bash
+      run: |
+        echo "🔍 Running ESLint..."
+        npm run lint
+        echo "✅ Linting completed successfully"
+
+    - name: 🔎 Type checking
+      id: typecheck
+      if: inputs.skip-build != 'true'
+      shell: bash
+      run: |
+        echo "🔎 Running TypeScript type checking..."
+        npm run type-check
+        echo "✅ Type checking completed successfully"
+
+    - name: 🏗️ Build packages
+      id: build
+      if: inputs.skip-build != 'true'
+      shell: bash
+      run: |
+        echo "🏗️ Building all packages..."
+        npm run build
+        echo "✅ Build completed successfully"
+
+    - name: 📊 Generate PR Comment
+      id: summary
+      shell: bash
+      run: |
+        install="${{ steps.install.outcome || 'skipped' }}"
+        lint="${{ steps.lint.outcome || 'skipped' }}"
+        typecheck="${{ steps.typecheck.outcome || 'skipped' }}"
+        build="${{ steps.build.outcome || 'skipped' }}"
+
+        install_icon=$([ "$install" = "success" ] && echo "✅" || [ "$install" = "skipped" ] && echo "⏭️" || echo "❌")
+        lint_icon=$([ "$lint" = "success" ] && echo "✅" || [ "$lint" = "skipped" ] && echo "⏭️" || echo "❌")
+        typecheck_icon=$([ "$typecheck" = "success" ] && echo "✅" || [ "$typecheck" = "skipped" ] && echo "⏭️" || echo "❌")
+        build_icon=$([ "$build" = "success" ] && echo "✅" || [ "$build" = "skipped" ] && echo "⏭️" || echo "❌")
+
+        if [[ "$install $lint $typecheck $build" == *"failure"* ]]; then
+          title="❌ **PR Validation Failed**"
+          summary_text="🔧 Please fix the failing steps and try again."
+          result="failure"
+        else
+          title="✅ **Pull Request Validation Successful**"
+          summary_text="🎉 All quality checks passed! Ready to merge."
+          result="success"
+        fi
+
+        cat << EOF > comment.txt
+        $title
+
+        **Step Results:**
+        - $install_icon **Install dependencies:** $install
+        - $lint_icon **Linting:** $lint
+        - $typecheck_icon **Type checking:** $typecheck
+        - $build_icon **Build packages:** $build
+
+        $summary_text
+        EOF
+
+        {
+          echo "comment-body<<COMMENT_EOF"
+          cat comment.txt
+          echo "COMMENT_EOF"
+        } >> $GITHUB_OUTPUT
+        echo "result=$result" >> $GITHUB_OUTPUT

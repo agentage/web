@@ -33,7 +33,6 @@ packages/shared/src/**/*.d.ts
 .env.production.local
 
 # IDE
-.vscode/
 .idea/
 *.swp
 *.swo

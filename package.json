@@ -8,7 +8,7 @@
   ],
   "scripts": {
     "build": "npm run build --workspace=@agentage/shared && npm run build --workspace=@agentage/backend && npm run build --workspace=@agentage/frontend",
-    "dev": "concurrently --kill-others \"npm run dev --workspace=@agentage/backend\" \"npm run dev --workspace=@agentage/frontend\"",
+    "dev": "bash scripts/dev.sh",
     "test": "npm run test --workspaces --if-present",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
     "lint:fix": "eslint . --ext .js,.jsx,.ts,.tsx --fix",

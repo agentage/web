@@ -1,0 +1,25 @@
+{
+  "recommendations": [
+    // 🤖 AI & Development Assistance
+    "github.copilot",
+    "github.copilot-chat",
+
+    // 🔧 Code Quality & Language Support
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "ms-vscode.vscode-typescript-next",
+    "streetsidesoftware.code-spell-checker",
+
+    // 🛠️ Development Tools
+    "christian-kohler.path-intellisense",
+    "aaron-bond.better-comments",
+
+    // 📝 Configuration & Documentation
+    "mikestead.dotenv",
+    "redhat.vscode-yaml",
+    "yzhang.markdown-all-in-one",
+
+    // 🐳 Docker Support
+    "ms-azuretools.vscode-docker"
+  ]
+}
