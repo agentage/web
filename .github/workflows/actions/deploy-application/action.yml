@@ -142,6 +142,7 @@ runs:
         echo "🚀 Starting deployment to ${{ inputs.environment }}..."
 
         REMOTE_DIR="/opt/agentage/${{ inputs.environment }}"
+        STACK_NAME="agentage-${{ inputs.environment }}"
 
         # Create remote directory
         ssh ${{ inputs.server-user }}@${{ inputs.domain-name }} "mkdir -p ${REMOTE_DIR}"
@@ -158,21 +159,33 @@ runs:
         echo "🔐 Authenticating with GHCR..."
         ssh ${{ inputs.server-user }}@${{ inputs.domain-name }} "echo '${{ inputs.github-token }}' | docker login ghcr.io -u ${{ github.actor }} --password-stdin"
 
-        # Deploy using docker compose
-        echo "🔄 Deploying services with Docker Compose..."
+        # Deploy using docker stack (Swarm mode)
+        echo "🔄 Deploying stack to Docker Swarm..."
         ssh ${{ inputs.server-user }}@${{ inputs.domain-name }} "cd ${REMOTE_DIR} && \
-          docker compose pull && \
-          docker compose up -d --remove-orphans && \
-          docker image prune -af --filter 'until=24h' && \
-          docker compose ps"
+          docker stack deploy -c ${{ inputs.compose-file }} ${STACK_NAME} --with-registry-auth"
+
+        # Force update services to pick up new environment variables
+        echo "🔄 Updating services with environment variables..."
+        ssh ${{ inputs.server-user }}@${{ inputs.domain-name }} "cd ${REMOTE_DIR} && \
+          if docker service ls --format '{{.Name}}' | grep -q '^${STACK_NAME}_backend$'; then
+            echo 'Updating backend service with .env variables...'
+            env_args=\"\"
+            while IFS='=' read -r key value; do
+              if [[ -n \"\$key\" && ! \"\$key\" =~ ^# ]]; then
+                env_args=\"\$env_args --env-add \$key=\$value\"
+              fi
+            done < .env
+            docker service update \$env_args --force ${STACK_NAME}_backend >/dev/null 2>&1 || true
+          fi
+        "
 
         if [ $? -eq 0 ]; then
-          echo "✅ Services deployed successfully"
+          echo "✅ Stack deployed successfully"
           echo "status=success" >> $GITHUB_OUTPUT
           echo "services=backend,frontend" >> $GITHUB_OUTPUT
           echo "url=https://${{ inputs.domain-name }}" >> $GITHUB_OUTPUT
         else
-          echo "❌ Deployment failed"
+          echo "❌ Stack deployment failed"
           echo "status=failed" >> $GITHUB_OUTPUT
           exit 1
         fi
