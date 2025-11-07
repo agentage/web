@@ -1,0 +1,194 @@
+name: 'Deploy Application'
+description: 'Deploy status monitoring application stack'
+inputs:
+  environment:
+    description: 'Deployment environment'
+    required: true
+  compose-file:
+    description: 'Docker compose file'
+    required: false
+    default: 'docker-compose.yml'
+  services:
+    description: 'Specific services to deploy'
+    required: false
+    default: 'all'
+  wait-for-healthy:
+    description: 'Wait for services to be healthy'
+    required: false
+    default: 'true'
+  domain-name:
+    description: 'Domain name for deployment'
+    required: true
+  frontend-fqdn:
+    description: 'Frontend FQDN for deployment'
+    required: true
+  api-fqdn:
+    description: 'API FQDN for deployment'
+    required: true
+  server-user:
+    description: 'Server user for deployment'
+    required: true
+  github-token:
+    description: 'GitHub token for registry access'
+    required: true
+  image-tag:
+    description: 'Docker image tag to deploy'
+    required: false
+    default: ${{ github.sha }}
+  secrets-json:
+    description: 'JSON string containing all application secrets'
+    required: true
+outputs:
+  deployment-status:
+    description: 'Deployment status'
+    value: ${{ steps.deploy.outputs.status }}
+  deployed-services:
+    description: 'Successfully deployed services'
+    value: ${{ steps.deploy.outputs.services }}
+  deployment-url:
+    description: 'Deployment URL'
+    value: ${{ steps.deploy.outputs.url }}
+runs:
+  using: composite
+  steps:
+    - name: Validate deployment inputs
+      shell: bash
+      run: |
+        echo "🔍 Validating deployment configuration..."
+        echo "Environment: ${{ inputs.environment }}"
+        echo "Domain: ${{ inputs.domain-name }}"
+        echo "Image tag: ${{ inputs.image-tag }}"
+        echo "Services: ${{ inputs.services }}"
+
+    - name: Setup SSH connection
+      shell: bash
+      run: |
+        echo "🔐 Setting up SSH connection..."
+        mkdir -p ~/.ssh
+        chmod 700 ~/.ssh
+        ssh-keyscan -H ${{ inputs.domain-name }} >> ~/.ssh/known_hosts
+
+        if ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no ${{ inputs.server-user }}@${{ inputs.domain-name }} "echo 'SSH connection test successful'"; then
+          echo "✅ SSH connection established"
+        else
+          echo "❌ SSH connection failed"
+          exit 1
+        fi
+
+    - name: Prepare deployment files and secrets
+      shell: bash
+      run: |
+        echo "📦 Preparing deployment files..."
+        mkdir -p deployment-temp
+
+        # Copy docker-compose file
+        if [ -f "${{ inputs.compose-file }}" ]; then
+          cp "${{ inputs.compose-file }}" deployment-temp/
+          echo "✅ Copied compose file: ${{ inputs.compose-file }}"
+        else
+          echo "❌ Compose file not found: ${{ inputs.compose-file }}"
+          exit 1
+        fi
+
+        # Update image tags
+        echo "🏷️ Updating image tags to :${{ inputs.image-tag }}"
+        sed -i "s|ghcr.io/${{ github.repository }}/\([^:]*\):latest|ghcr.io/${{ github.repository }}/\1:${{ inputs.image-tag }}|g" deployment-temp/${{ inputs.compose-file }}
+        sed -i "s|ghcr.io/${{ github.repository }}/\([^:]*\)$|ghcr.io/${{ github.repository }}/\1:${{ inputs.image-tag }}|g" deployment-temp/${{ inputs.compose-file }}
+
+        # Replace FQDN variables in docker-compose file
+        echo "🌐 Replacing FQDN variables in compose file..."
+        sed -i "s/\${FRONTEND_FQDN}/${{ inputs.frontend-fqdn }}/g" deployment-temp/${{ inputs.compose-file }}
+        sed -i "s/\${API_FQDN}/${{ inputs.api-fqdn }}/g" deployment-temp/${{ inputs.compose-file }}
+        echo "✅ FQDN variables replaced successfully"
+
+        # 🔑 JSON to .env conversion - This is the key part!
+        echo "🔑 Converting JSON secrets to .env file..."
+
+        # Parse JSON and convert to .env format
+        echo '${{ inputs.secrets-json }}' | jq -r '
+          # Handle nested oauth structure
+          if has("oauth") then
+            (.oauth | to_entries[] | 
+              (.key | ascii_upcase) + "_CLIENT_ID=" + .value.client_id,
+              (.key | ascii_upcase) + "_CLIENT_SECRET=" + .value.client_secret
+            ),
+            # Handle direct properties
+            (to_entries[] | select(.key != "oauth") | 
+              (.key | ascii_upcase) + "=" + (.value | tostring)
+            )
+          else
+            # Flat structure fallback
+            to_entries[] | (.key | ascii_upcase) + "=" + (.value | tostring)
+          end
+        ' > deployment-temp/.env
+
+        # Set secure permissions
+        chmod 600 deployment-temp/.env
+
+        # Add FQDN environment variables for service routing
+        echo "🌐 Adding FQDN environment variables..."
+        cat >> deployment-temp/.env << EOF
+        FRONTEND_FQDN=${{ inputs.frontend-fqdn }}
+        API_FQDN=${{ inputs.api-fqdn }}
+        EOF
+
+        echo "✅ .env file created with secrets and FQDN variables"
+        echo "📊 .env file contains $(wc -l < deployment-temp/.env) environment variables"
+
+    - name: Deploy to remote server
+      id: deploy
+      shell: bash
+      run: |
+        echo "🚀 Starting deployment to ${{ inputs.environment }}..."
+
+        REMOTE_DIR="/opt/agentage/${{ inputs.environment }}"
+
+        # Create remote directory
+        ssh ${{ inputs.server-user }}@${{ inputs.domain-name }} "mkdir -p ${REMOTE_DIR}"
+
+        # Copy files to server
+        echo "📤 Copying deployment files..."
+        scp deployment-temp/${{ inputs.compose-file }} ${{ inputs.server-user }}@${{ inputs.domain-name }}:${REMOTE_DIR}/
+        scp deployment-temp/.env ${{ inputs.server-user }}@${{ inputs.domain-name }}:${REMOTE_DIR}/
+
+        # Set secure permissions on remote .env file
+        ssh ${{ inputs.server-user }}@${{ inputs.domain-name }} "chmod 600 ${REMOTE_DIR}/.env"
+
+        # GitHub Container Registry login
+        echo "🔐 Authenticating with GHCR..."
+        ssh ${{ inputs.server-user }}@${{ inputs.domain-name }} "echo '${{ inputs.github-token }}' | docker login ghcr.io -u ${{ github.actor }} --password-stdin"
+
+        # Deploy using docker compose
+        echo "🔄 Deploying services with Docker Compose..."
+        ssh ${{ inputs.server-user }}@${{ inputs.domain-name }} "cd ${REMOTE_DIR} && \
+          docker compose pull && \
+          docker compose up -d --remove-orphans && \
+          docker image prune -af --filter 'until=24h' && \
+          docker compose ps"
+
+        if [ $? -eq 0 ]; then
+          echo "✅ Services deployed successfully"
+          echo "status=success" >> $GITHUB_OUTPUT
+          echo "services=backend,frontend" >> $GITHUB_OUTPUT
+          echo "url=https://${{ inputs.domain-name }}" >> $GITHUB_OUTPUT
+        else
+          echo "❌ Deployment failed"
+          echo "status=failed" >> $GITHUB_OUTPUT
+          exit 1
+        fi
+
+    - name: Verify deployment
+      shell: bash
+      run: |
+        echo "🎉 Deployment completed successfully!"
+        echo "Environment: ${{ inputs.environment }}"
+        echo "Status: ✅ Success"
+        echo "URL: https://${{ inputs.domain-name }}"
+
+    - name: Cleanup
+      if: always()
+      shell: bash
+      run: |
+        echo "🧹 Cleaning up temporary files..."
+        rm -rf deployment-temp
+        echo "✅ Cleanup completed"

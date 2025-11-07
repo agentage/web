@@ -1,5 +1,5 @@
 name: 'Validate Workspace'
-description: 'Comprehensive workspace validation - install, lint, type-check, and build all packages'
+description: 'Comprehensive workspace validation for monorepo - install, lint, test, and build all packages'
 inputs:
   node-version:
     description: 'Node.js version to use'
@@ -11,6 +11,10 @@ inputs:
     default: 'false'
   skip-lint:
     description: 'Skip linting'
+    required: false
+    default: 'false'
+  skip-test:
+    description: 'Skip testing'
     required: false
     default: 'false'
   skip-build:
@@ -39,7 +43,7 @@ runs:
       shell: bash
       run: |
         echo "📦 Installing all workspace dependencies..."
-        npm ci
+        npm install
         echo "✅ Dependencies installed successfully"
 
     - name: 🔍 Run linting
@@ -47,18 +51,9 @@ runs:
       if: inputs.skip-lint != 'true'
       shell: bash
       run: |
-        echo "🔍 Running ESLint..."
+        echo "🔍 Running ESLint across all workspaces..."
         npm run lint
         echo "✅ Linting completed successfully"
-
-    - name: 🔎 Type checking
-      id: typecheck
-      if: inputs.skip-build != 'true'
-      shell: bash
-      run: |
-        echo "🔎 Running TypeScript type checking..."
-        npm run type-check
-        echo "✅ Type checking completed successfully"
 
     - name: 🏗️ Build packages
       id: build
@@ -69,21 +64,38 @@ runs:
         npm run build
         echo "✅ Build completed successfully"
 
+    - name: 🧪 Run tests
+      id: test
+      if: inputs.skip-test != 'true'
+      shell: bash
+      run: |
+        echo "🧪 Running tests across all workspaces..."
+        npm run test
+        echo "✅ Tests completed successfully"
+
     - name: 📊 Generate PR Comment
       id: summary
       shell: bash
       run: |
+        # Collect outcomes
         install="${{ steps.install.outcome || 'skipped' }}"
         lint="${{ steps.lint.outcome || 'skipped' }}"
-        typecheck="${{ steps.typecheck.outcome || 'skipped' }}"
+        test="${{ steps.test.outcome || 'skipped' }}"
         build="${{ steps.build.outcome || 'skipped' }}"
 
-        install_icon=$([ "$install" = "success" ] && echo "✅" || [ "$install" = "skipped" ] && echo "⏭️" || echo "❌")
-        lint_icon=$([ "$lint" = "success" ] && echo "✅" || [ "$lint" = "skipped" ] && echo "⏭️" || echo "❌")
-        typecheck_icon=$([ "$typecheck" = "success" ] && echo "✅" || [ "$typecheck" = "skipped" ] && echo "⏭️" || echo "❌")
-        build_icon=$([ "$build" = "success" ] && echo "✅" || [ "$build" = "skipped" ] && echo "⏭️" || echo "❌")
+        # Generate step results
+        install_icon=$([ "$install" = "success" ] && echo "✅" || echo "❌")
+        lint_icon=$([ "$lint" = "success" ] && echo "✅" || echo "❌")
+        test_icon=$([ "$test" = "success" ] && echo "✅" || echo "❌")
+        build_icon=$([ "$build" = "success" ] && echo "✅" || echo "❌")
 
-        if [[ "$install $lint $typecheck $build" == *"failure"* ]]; then
+        install_bool=$([ "$install" = "success" ] && echo "true" || echo "false")
+        lint_bool=$([ "$lint" = "success" ] && echo "true" || echo "false")
+        test_bool=$([ "$test" = "success" ] && echo "true" || echo "false")
+        build_bool=$([ "$build" = "success" ] && echo "true" || echo "false")
+
+        # Determine overall result
+        if [[ "$install $lint $test $build" == *"failure"* ]]; then
           title="❌ **PR Validation Failed**"
           summary_text="🔧 Please fix the failing steps and try again."
           result="failure"
@@ -93,21 +105,37 @@ runs:
           result="success"
         fi
 
-        cat << EOF > comment.txt
+        # Generate complete comment body
+        cat << 'COMMENT_EOF' > comment.txt
         $title
 
         **Step Results:**
-        - $install_icon **Install dependencies:** $install
-        - $lint_icon **Linting:** $lint
-        - $typecheck_icon **Type checking:** $typecheck
-        - $build_icon **Build packages:** $build
+        - $install_icon **📦 Install dependencies:** $install_bool
+        - $lint_icon **🔍 Run linting:** $lint_bool
+        - $test_icon **🧪 Run tests:** $test_bool
+        - $build_icon **🏗️ Build packages:** $build_bool
 
         $summary_text
-        EOF
 
+        📋 [View workflow run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+        COMMENT_EOF
+
+        # Substitute variables in the comment
+        sed -i "s/\$title/$title/g" comment.txt
+        sed -i "s/\$install_icon/$install_icon/g" comment.txt
+        sed -i "s/\$lint_icon/$lint_icon/g" comment.txt
+        sed -i "s/\$test_icon/$test_icon/g" comment.txt
+        sed -i "s/\$build_icon/$build_icon/g" comment.txt
+        sed -i "s/\$install_bool/$install_bool/g" comment.txt
+        sed -i "s/\$lint_bool/$lint_bool/g" comment.txt
+        sed -i "s/\$test_bool/$test_bool/g" comment.txt
+        sed -i "s/\$build_bool/$build_bool/g" comment.txt
+        sed -i "s/\$summary_text/$summary_text/g" comment.txt
+
+        # Set outputs
         {
-          echo "comment-body<<COMMENT_EOF"
+          echo "comment-body<<EOF"
           cat comment.txt
-          echo "COMMENT_EOF"
+          echo "EOF"
         } >> $GITHUB_OUTPUT
         echo "result=$result" >> $GITHUB_OUTPUT

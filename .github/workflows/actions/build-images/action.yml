@@ -1,0 +1,161 @@
+name: 'Build All Docker Images'
+description: 'Build all Docker images using docker-compose with optimization for status monitor services'
+inputs:
+  registry:
+    description: 'Docker registry'
+    required: false
+    default: 'ghcr.io'
+  push:
+    description: 'Push images to registry'
+    required: false
+    default: 'false'
+  github-token:
+    description: 'GitHub token for registry authentication'
+    required: false
+  tag:
+    description: 'Custom tag for the images (defaults to github.sha)'
+    required: false
+    default: 'latest'
+outputs:
+  built-services:
+    description: 'Comma-separated list of built services'
+    value: ${{ steps.build.outputs.built-services }}
+  images-info:
+    description: 'JSON array of built image information'
+    value: ${{ steps.build.outputs.images-info }}
+runs:
+  using: composite
+  steps:
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Create minimal .env file for build
+      shell: bash
+      run: |
+        echo "Creating minimal .env file for Docker build..."
+        cat > .env << EOF
+        # Minimal .env for Docker build
+        FRONTEND_FQDN=localhost
+        API_FQDN=localhost
+        NEXT_PUBLIC_API_URL=/api
+        EOF
+        echo "✅ .env file created"
+
+    - name: Login to Container Registry
+      if: inputs.push == 'true'
+      shell: bash
+      run: |
+        echo "${{ inputs.github-token }}" | docker login ${{ inputs.registry }} -u ${{ github.actor }} --password-stdin
+
+    - name: Build all images with docker-compose
+      id: build
+      shell: bash
+      env:
+        FRONTEND_FQDN: 'localhost'
+        API_FQDN: 'localhost'
+      run: |
+        echo "🏗️ Building images for mcpxhub.io services..."
+        docker compose build --parallel
+        echo "✅ Build completed for: frontend, backend"
+
+        # Find all services that have a 'build' section and get their image names
+        BUILT_SERVICES=$(docker compose config | yq eval '.services | to_entries | map(select(.value.build != null)) | .[].key' - | tr '\n' ',')
+        BUILT_SERVICES=${BUILT_SERVICES%,}  # Remove trailing comma
+
+        # Create a JSON array of service info with their actual image names
+        IMAGES_INFO="["
+        IFS=',' read -ra SERVICES <<< "$BUILT_SERVICES"
+        for i in "${!SERVICES[@]}"; do
+          service="${SERVICES[i]}"
+          # Get the actual image name from docker-compose config
+          image_name=$(docker compose config | yq eval ".services.${service}.image" -)
+          if [[ "$i" -gt 0 ]]; then
+            IMAGES_INFO+=","
+          fi
+          IMAGES_INFO+="{\"service\":\"${service}\",\"image\":\"${image_name}\"}"
+        done
+        IMAGES_INFO+="]"
+
+        echo "built-services=$BUILT_SERVICES" >> $GITHUB_OUTPUT
+        echo "images-info=$IMAGES_INFO" >> $GITHUB_OUTPUT
+        echo "✅ Built services: $BUILT_SERVICES"
+
+    - name: Tag images for registry
+      if: inputs.push == 'true'
+      shell: bash
+      run: |
+        TAG=${{ inputs.tag }}
+        # If tag is 'latest' but we're in a PR context, use PR number
+        if [[ "$TAG" == "latest" && "${{ github.event_name }}" == "pull_request" ]]; then
+          TAG="pr-${{ github.event.number }}"
+        elif [[ "$TAG" == "latest" && "${{ github.event_name }}" != "pull_request" ]]; then
+          TAG="${{ github.sha }}"
+        fi
+
+        echo "🏷️ Tagging images with tag: $TAG"
+
+        # Parse the images info JSON to get actual image names
+        IMAGES_INFO='${{ steps.build.outputs.images-info }}'
+        echo "$IMAGES_INFO" | jq -r '.[] | @base64' | while read -r service_data; do
+          service_info=$(echo "$service_data" | base64 --decode)
+          service=$(echo "$service_info" | jq -r '.service')
+          current_image=$(echo "$service_info" | jq -r '.image')
+
+          # Extract the base name without tag for tagging
+          base_image=$(echo "$current_image" | sed 's/:.*$//')
+          target_image="${base_image}:${TAG}"
+
+          echo "🏷️ Tagging ${service}: ${current_image} -> ${target_image}"
+          docker tag "$current_image" "$target_image"
+        done
+
+    - name: Push images to registry
+      if: inputs.push == 'true'
+      shell: bash
+      run: |
+        TAG=${{ inputs.tag }}
+        # If tag is 'latest' but we're in a PR context, use PR number
+        if [[ "$TAG" == "latest" && "${{ github.event_name }}" == "pull_request" ]]; then
+          TAG="pr-${{ github.event.number }}"
+        elif [[ "$TAG" == "latest" && "${{ github.event_name }}" != "pull_request" ]]; then
+          TAG="${{ github.sha }}"
+        fi
+
+        echo "🚀 Pushing images with tag: $TAG"
+
+        # Parse the images info JSON to get actual image names
+        IMAGES_INFO='${{ steps.build.outputs.images-info }}'
+        echo "$IMAGES_INFO" | jq -r '.[] | @base64' | while read -r service_data; do
+          service_info=$(echo "$service_data" | base64 --decode)
+          service=$(echo "$service_info" | jq -r '.service')
+          current_image=$(echo "$service_info" | jq -r '.image')
+
+          # Extract the base name without tag for pushing
+          base_image=$(echo "$current_image" | sed 's/:.*$//')
+          target_image="${base_image}:${TAG}"
+
+          echo "🚀 Pushing ${service}: ${target_image}"
+          docker push "$target_image"
+        done
+
+    - name: Generate images summary
+      shell: bash
+      run: |
+        TAG=${{ inputs.tag }}
+        # If tag is 'latest' but we're in a PR context, use PR number
+        if [[ "$TAG" == "latest" && "${{ github.event_name }}" == "pull_request" ]]; then
+          TAG="pr-${{ github.event.number }}"
+        elif [[ "$TAG" == "latest" && "${{ github.event_name }}" != "pull_request" ]]; then
+          TAG="${{ github.sha }}"
+        fi
+
+        echo "🔍 Image build summary:"
+        echo "📦 Registry: ${{ inputs.registry }}"
+        echo "🏷️ Tag: $TAG"
+        echo "📋 Built services: ${{ steps.build.outputs.built-services }}"
+
+        if [[ "${{ inputs.push }}" == "true" ]]; then
+          echo "✅ All images built and pushed successfully"
+        else
+          echo "✅ All images built successfully (not pushed)"
+        fi

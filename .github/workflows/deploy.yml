@@ -80,7 +80,7 @@ jobs:
     needs: build-and-push
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
-    environment: development # This references the GitHub Environment
+    environment: development
 
     steps:
       - name: Checkout repository
@@ -91,48 +91,25 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      - name: Prepare deployment files
+      - name: Deploy Application
+        id: deploy
+        uses: ./.github/workflows/actions/deploy-application
+        with:
+          environment: 'development'
+          compose-file: 'docker-compose.yml'
+          domain-name: ${{ vars.SSH_HOST || secrets.SSH_HOST }}
+          frontend-fqdn: ${{ vars.FRONTEND_FQDN || 'dev.agentage.io' }}
+          api-fqdn: ${{ vars.API_FQDN || 'api.dev.agentage.io' }}
+          server-user: ${{ vars.SSH_USERNAME || secrets.SSH_USERNAME }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          image-tag: 'latest'
+          secrets-json: ${{ secrets.APP_SECRETS_JSON || '{}' }}
+          wait-for-healthy: 'false'
+
+      - name: Deployment Status
         run: |
-          echo "📦 Preparing deployment files..."
-          mkdir -p deployment-temp
-
-          # Copy docker-compose file
-          cp docker-compose.yml deployment-temp/
-
-          echo "✅ Deployment files ready"
-
-      - name: Deploy to Hetzner
-        run: |
-          echo "🚀 Starting deployment..."
-
-          REMOTE_DIR="/opt/agentage/web"
-          SERVER_HOST="${{ vars.SSH_HOST || secrets.SSH_HOST }}"
-          SERVER_USER="${{ vars.SSH_USERNAME || secrets.SSH_USERNAME }}"
-
-          # Add host to known_hosts
-          ssh-keyscan -H ${SERVER_HOST} >> ~/.ssh/known_hosts
-
-          # Create remote directory if it doesn't exist
-          echo "📁 Creating remote directory: ${REMOTE_DIR}"
-          ssh ${SERVER_USER}@${SERVER_HOST} "mkdir -p ${REMOTE_DIR}"
-
-          # Copy docker-compose file to server
-          echo "📤 Copying deployment files..."
-          scp deployment-temp/docker-compose.yml ${SERVER_USER}@${SERVER_HOST}:${REMOTE_DIR}/
-
-          # Login to GHCR and deploy
-          echo "🚀 Deploying services..."
-          ssh ${SERVER_USER}@${SERVER_HOST} "cd ${REMOTE_DIR} && \
-            echo '${{ secrets.GITHUB_TOKEN }}' | docker login ghcr.io -u ${{ github.actor }} --password-stdin && \
-            docker compose pull && \
-            docker compose up -d --remove-orphans && \
-            docker image prune -af --filter 'until=24h' && \
-            docker compose ps"
-
           echo "✅ Deployment completed successfully!"
-
-      - name: Cleanup
-        if: always()
-        run: |
-          echo "🧹 Cleaning up temporary files..."
-          rm -rf deployment-temp
+          echo "Environment: development"
+          echo "Services: ${{ steps.deploy.outputs.deployed-services }}"
+          echo "URL: ${{ steps.deploy.outputs.deployment-url }}"
+          echo "Status: ${{ steps.deploy.outputs.deployment-status }}"
