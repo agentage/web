@@ -71,7 +71,7 @@ export const Footer = () => {
                 </li>
                 <li>
                   <a
-                    href="https://github.com/agentage/web"
+                    href="https://github.com/agentage/"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-gray-400 hover:text-white transition-colors"

@@ -55,7 +55,9 @@ export const Header = () => {
                 Terms
               </a>
               <a
-                href="https://github.com/agentage/web"
+                href="https://github.com/agentage/"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="text-gray-500 hover:text-blue-600 transition-colors"
               >
                 GitHub
