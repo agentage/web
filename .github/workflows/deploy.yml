@@ -83,24 +83,56 @@ jobs:
     environment: development # This references the GitHub Environment
 
     steps:
-      - name: Deploy to Hetzner via SSH
-        uses: appleboy/ssh-action@v1.0.0
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
         with:
-          host: ${{ vars.SSH_HOST || secrets.SSH_HOST }}
-          username: ${{ vars.SSH_USERNAME || secrets.SSH_USERNAME }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: ${{ vars.SSH_PORT || secrets.SSH_PORT || '22' }}
-          script: |
-            cd /opt/agentage/web
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-            # Pull latest images
-            docker compose pull
+      - name: Prepare deployment files
+        run: |
+          echo "📦 Preparing deployment files..."
+          mkdir -p deployment-temp
 
-            # Deploy with zero-downtime
-            docker compose up -d --remove-orphans
+          # Copy docker-compose file
+          cp docker-compose.yml deployment-temp/
 
-            # Clean up old images
-            docker image prune -af --filter "until=24h"
+          echo "✅ Deployment files ready"
 
-            # Show status
-            docker compose ps
+      - name: Deploy to Hetzner
+        run: |
+          echo "🚀 Starting deployment..."
+
+          REMOTE_DIR="/opt/agentage/web"
+          SERVER_HOST="${{ vars.SSH_HOST || secrets.SSH_HOST }}"
+          SERVER_USER="${{ vars.SSH_USERNAME || secrets.SSH_USERNAME }}"
+
+          # Add host to known_hosts
+          ssh-keyscan -H ${SERVER_HOST} >> ~/.ssh/known_hosts
+
+          # Create remote directory if it doesn't exist
+          echo "📁 Creating remote directory: ${REMOTE_DIR}"
+          ssh ${SERVER_USER}@${SERVER_HOST} "mkdir -p ${REMOTE_DIR}"
+
+          # Copy docker-compose file to server
+          echo "📤 Copying deployment files..."
+          scp deployment-temp/docker-compose.yml ${SERVER_USER}@${SERVER_HOST}:${REMOTE_DIR}/
+
+          # Login to GHCR and deploy
+          echo "🚀 Deploying services..."
+          ssh ${SERVER_USER}@${SERVER_HOST} "cd ${REMOTE_DIR} && \
+            echo '${{ secrets.GITHUB_TOKEN }}' | docker login ghcr.io -u ${{ github.actor }} --password-stdin && \
+            docker compose pull && \
+            docker compose up -d --remove-orphans && \
+            docker image prune -af --filter 'until=24h' && \
+            docker compose ps"
+
+          echo "✅ Deployment completed successfully!"
+
+      - name: Cleanup
+        if: always()
+        run: |
+          echo "🧹 Cleaning up temporary files..."
+          rm -rf deployment-temp

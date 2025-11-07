@@ -134,27 +134,27 @@ Before deploying, ensure your server has:
    docker compose version
    ```
 
-2. **Traefik running** (for production deployment with SSL):
+2. **SSH access configured:**
    ```bash
-   docker ps | grep traefik
-   docker network ls | grep traefik-public
+   # On your server, ensure the public key is authorized
+   cat ~/.ssh/authorized_keys
    ```
 
-3. **Directory structure:**
+3. **Directory structure (will be created automatically by the workflow):**
    ```bash
-   mkdir -p /opt/agentage
-   cd /opt/agentage
+   # The workflow will create this automatically:
+   # /opt/agentage/web
+   
+   # But you can pre-create it if you prefer:
+   mkdir -p /opt/agentage/web
+   cd /opt/agentage/web
    ```
 
-4. **Environment file** (`.env`):
-   ```bash
-   # Create .env file on server
-   cat > /opt/agentage/.env << EOF
-   NODE_ENV=production
-   DOMAIN=dev.agentage.io
-   API_SUBDOMAIN=api
-   EOF
-   ```
+**Note:** The deployment workflow now automatically:
+- Creates the `/opt/agentage/web` directory if it doesn't exist
+- Copies the `docker-compose.yml` file from the repository
+- Logs into GitHub Container Registry
+- Pulls and deploys the latest images
 
 ## Manual Deployment (Alternative)
 
