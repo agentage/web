@@ -17,7 +17,7 @@ jobs:
     permissions:
       contents: read
       packages: write
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -80,26 +80,27 @@ jobs:
     needs: build-and-push
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
-    
+    environment: development # This references the GitHub Environment
+
     steps:
       - name: Deploy to Hetzner via SSH
         uses: appleboy/ssh-action@v1.0.0
         with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USERNAME }}
+          host: ${{ vars.SSH_HOST || secrets.SSH_HOST }}
+          username: ${{ vars.SSH_USERNAME || secrets.SSH_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: ${{ secrets.SSH_PORT || 22 }}
+          port: ${{ vars.SSH_PORT || secrets.SSH_PORT || '22' }}
           script: |
             cd /opt/agentage/web
-            
+
             # Pull latest images
             docker compose pull
-            
+
             # Deploy with zero-downtime
             docker compose up -d --remove-orphans
-            
+
             # Clean up old images
             docker image prune -af --filter "until=24h"
-            
+
             # Show status
             docker compose ps

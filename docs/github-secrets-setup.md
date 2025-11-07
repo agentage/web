@@ -1,26 +1,51 @@
 # GitHub Secrets Setup Guide
 
-To enable automated deployment via GitHub Actions, you need to configure the following secrets in your repository.
+To enable automated deployment via GitHub Actions, you need to configure environment-specific secrets and variables using **GitHub Environments**.
 
-## Required Secrets
+## Setup GitHub Environment
 
-Go to your repository on GitHub:
-`https://github.com/agentage/web/settings/secrets/actions`
+GitHub Environments allow you to configure deployment protection rules and environment-specific secrets/variables.
 
-Add these secrets:
+### Step 1: Create Environment
 
-### 1. SSH_HOST
-The hostname or IP address of your deployment server.
+1. Go to your repository on GitHub
+2. Navigate to: `https://github.com/agentage/web/settings/environments`
+3. Click **New environment**
+4. Name it: `development` (this matches the workflow configuration)
+5. Click **Configure environment**
 
-**Value:** `dev.agentage.io` or your server's IP address
+### Step 2: Add Environment Variables and Secrets
 
-### 2. SSH_USERNAME
-The SSH user for connecting to your server.
+In the environment configuration page, add the following:
 
-**Value:** Your server username (e.g., `root` or `ubuntu`)
+In the environment configuration page, add the following:
 
-### 3. SSH_PRIVATE_KEY
-The private SSH key for authenticating to your server.
+#### Environment Variables (publicly visible)
+
+These are non-sensitive configuration values that can be visible in logs:
+
+##### SSH_HOST
+**Type:** Variable  
+**Value:** `dev.agentage.io` or your server's IP address  
+**Description:** The hostname or IP address of your deployment server
+
+##### SSH_USERNAME  
+**Type:** Variable  
+**Value:** Your server username (e.g., `root` or `ubuntu`)  
+**Description:** The SSH user for connecting to your server
+
+##### SSH_PORT (Optional)
+**Type:** Variable  
+**Value:** `22` (default)  
+**Description:** The SSH port if not using default port 22
+
+#### Environment Secrets (encrypted)
+
+These are sensitive values that will be encrypted and never shown in logs:
+
+##### SSH_PRIVATE_KEY
+**Type:** Secret  
+**Description:** The private SSH key for authenticating to your server
 
 **How to get it:**
 ```bash
@@ -41,18 +66,63 @@ cat ~/.ssh/id_ed25519
 cat ~/.ssh/authorized_keys
 ```
 
-### 4. SSH_PORT (Optional)
-The SSH port if not using default port 22.
+### Step 3: Save Configuration
 
-**Default:** `22`
+Click **Save protection rules** to save your environment configuration.
+
+## Alternative: Repository-Level Secrets (Not Recommended)
+
+If you prefer not to use environments, you can add secrets at the repository level, but you'll need to modify the workflow file:
+
+Go to: `https://github.com/agentage/web/settings/secrets/actions`
+
+Add the same secrets/variables listed above, then update `.github/workflows/deploy.yml` to remove the `environment: development` line from the deploy job.
 
 ## Verification
 
-After adding secrets, you can verify them by:
-1. Go to repository **Settings → Secrets and variables → Actions**
-2. You should see all 3-4 secrets listed (values are hidden)
+After adding secrets and variables, you can verify them by:
+1. Go to repository **Settings → Environments → development**
+2. You should see all variables and secrets listed (secret values are hidden)
 3. Push to `main` branch to trigger the workflow
 4. Check **Actions** tab to see the deployment progress
+
+## Multiple Environments (Optional)
+
+You can create additional environments for production:
+
+1. Create a new environment named `production`
+2. Add the same variables/secrets with production values:
+   - `SSH_HOST`: `agentage.io` (or production server)
+   - `SSH_USERNAME`: production server user
+   - `SSH_PRIVATE_KEY`: production SSH key
+3. Optionally add **Protection rules**:
+   - Required reviewers before deployment
+   - Wait timer before deployment
+   - Deployment branches (e.g., only `main` or `production` branch)
+
+Then modify your workflow to support multiple environments:
+
+```yaml
+on:
+  push:
+    branches:
+      - main  # triggers development
+      - production  # triggers production
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        type: choice
+        options:
+          - development
+          - production
+
+jobs:
+  deploy:
+    environment: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || (github.ref == 'refs/heads/production' && 'production' || 'development') }}
+    # ... rest of the job
+```
 
 ## Server Prerequisites
 
