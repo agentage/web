@@ -83,7 +83,7 @@ Add the same secrets/variables listed above, then update `.github/workflows/depl
 After adding secrets and variables, you can verify them by:
 1. Go to repository **Settings → Environments → development**
 2. You should see all variables and secrets listed (secret values are hidden)
-3. Push to `main` branch to trigger the workflow
+3. Push to `master` branch to trigger the workflow
 4. Check **Actions** tab to see the deployment progress
 
 ## Multiple Environments (Optional)
@@ -98,7 +98,7 @@ You can create additional environments for production:
 3. Optionally add **Protection rules**:
    - Required reviewers before deployment
    - Wait timer before deployment
-   - Deployment branches (e.g., only `main` or `production` branch)
+   - Deployment branches (e.g., only `master` or `production` branch)
 
 Then modify your workflow to support multiple environments:
 
@@ -106,7 +106,7 @@ Then modify your workflow to support multiple environments:
 on:
   push:
     branches:
-      - main  # triggers development
+      - master  # triggers development
       - production  # triggers production
   workflow_dispatch:
     inputs:
