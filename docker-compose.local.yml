@@ -1,6 +1,26 @@
-version: '3.8'
+version: "3.8"
 
 services:
+  mongodb:
+    image: mongo:7-jammy
+    container_name: agentage-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    environment:
+      - MONGO_INITDB_DATABASE=agentage
+    command: mongod --noauth --quiet
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - web_net
+
   backend:
     image: ghcr.io/agentage/web/backend:latest
     container_name: agentage-backend
@@ -8,14 +28,25 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3001
+      - MONGODB_URI=mongodb://mongodb:27017/agentage
     ports:
       - "3001:3001"
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3001/api/health"]
+      test:
+        [
+          "CMD",
+          "wget",
+          "--quiet",
+          "--tries=1",
+          "--spider",
+          "http://localhost:3001/api/health",
+        ]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
+    depends_on:
+      - mongodb
     networks:
       - web_net
 
@@ -32,6 +63,10 @@ services:
       - backend
     networks:
       - web_net
+
+volumes:
+  mongodb_data:
+    driver: local
 
 networks:
   web_net:

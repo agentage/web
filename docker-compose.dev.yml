@@ -1,0 +1,26 @@
+services:
+  mongodb-dev:
+    image: mongo:7-jammy
+    container_name: agentage-mongodb-dev
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_dev_data:/data/db
+    environment:
+      - MONGO_INITDB_DATABASE=agentage_dev
+    command: mongod --noauth --quiet
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+volumes:
+  mongodb_dev_data:
+    driver: local
+
+networks:
+  default:
+    name: agentage-dev
