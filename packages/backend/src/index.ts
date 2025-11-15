@@ -1,27 +1,56 @@
-import { createApp } from './app';
-import { connectToMongoDB } from './db/mongodb';
+import { createServer } from './app';
+import { appServiceProvider } from './services/app.services';
 
-const PORT = parseInt(process.env.PORT || '3001', 10);
-const HOST = process.env.HOST || '0.0.0.0';
-
-async function startServer() {
+const startServer = async () => {
   try {
-    // Connect to MongoDB
-    await connectToMongoDB();
+    const serviceProvider = appServiceProvider;
 
-    const app = createApp();
+    // Initialize all services
+    console.log('🔧 Initializing services...');
+    await serviceProvider.initialize();
 
-    app.listen(PORT, HOST, () => {
-      console.log(`Backend server running on ${HOST}:${PORT}`);
-      console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-      console.log(`Endpoints:`);
-      console.log(`  - GET /api/health`);
-      console.log(`  - GET /api/status`);
+    const { server } = await createServer(serviceProvider);
+
+    const configService = await serviceProvider.get('config');
+    const logger = await serviceProvider.get('logger');
+
+    const port = configService.getNumber('PORT', 3001);
+    const host = configService.get('HOST') || '0.0.0.0';
+
+    // Graceful shutdown handler
+    const gracefulShutdown = async (signal: string) => {
+      logger.info(`Received ${signal}, shutting down gracefully`);
+      try {
+        // Close MongoDB connection
+        const mongoService = await serviceProvider.get('mongo');
+        await mongoService.disconnect();
+        logger.info('MongoDB connection closed');
+        process.exit(0);
+      } catch (error) {
+        logger.error('Error during shutdown:', { error });
+        process.exit(1);
+      }
+    };
+
+    process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+    process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+
+    await new Promise<void>((resolve) => {
+      server.listen(port, host, resolve);
     });
-  } catch (error) {
-    console.error('Failed to start server:', error);
+
+    logger.info(`🚀 Backend server listening on ${host}:${port}`);
+    logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    logger.info(`Endpoints:`);
+    logger.info(`  - GET /api/health`);
+    logger.info(`  - GET /api/status`);
+  } catch (err) {
+    console.error('Failed to start server:', err);
     process.exit(1);
   }
-}
+};
 
-startServer();
+startServer().catch((err) => {
+  console.error('Application startup failed:', err);
+  process.exit(1);
+});
