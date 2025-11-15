@@ -37,7 +37,7 @@ export const validateRequest = (options: {
         if (!result.success) {
           errors.push({ field: 'query', issues: result.error.issues });
         } else {
-          (req as any).query = result.data;
+          Object.assign(req.query, result.data);
         }
       }
 
@@ -46,7 +46,7 @@ export const validateRequest = (options: {
         if (!result.success) {
           errors.push({ field: 'params', issues: result.error.issues });
         } else {
-          (req as any).params = result.data;
+          Object.assign(req.params, result.data);
         }
       }
 

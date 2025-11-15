@@ -62,7 +62,7 @@ export const createAuthMiddleware = (serviceProvider: ServiceProvider<AppService
         }
 
         // Attach user info to request (placeholder for JWT payload)
-        (req as any).user = {
+        (req as Express.Request & { user?: { id: string; role: string } }).user = {
           id: 'anonymous',
           role: 'user',
         };
@@ -84,7 +84,7 @@ export const createAuthMiddleware = (serviceProvider: ServiceProvider<AppService
       return async (req: Request, res: Response, next: NextFunction) => {
         try {
           const logger = await serviceProvider.get('logger');
-          const user = (req as any).user;
+          const user = (req as Express.Request & { user?: { id: string; role: string } }).user;
 
           if (!user) {
             return res.status(401).json({
@@ -135,7 +135,7 @@ async function logError(
       error: error instanceof Error ? error.message : 'Unknown error',
       path: req.path,
       method: req.method,
-      userId: (req as any).user?.id,
+      userId: (req as Express.Request & { user?: { id: string } }).user?.id,
     });
   } catch {
     // Fallback to console if logger fails

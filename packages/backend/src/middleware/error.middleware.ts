@@ -99,7 +99,7 @@ async function logError(
     method: req.method,
     ip: req.ip,
     userAgent: req.get('User-Agent'),
-    userId: (req as any).user?.id,
+    userId: (req as Express.Request & { user?: { id: string } }).user?.id,
   };
 
   if (serviceProvider) {
