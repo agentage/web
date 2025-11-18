@@ -1,0 +1,55 @@
+meta {
+  name: POST /api/agents
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/agents
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "name": "test-agent",
+    "description": "A test agent for demonstration",
+    "visibility": "public",
+    "version": "1.0.0",
+    "content": "export default function agent() { return 'Hello World'; }",
+    "tags": ["test", "demo"],
+    "changelog": "Initial release"
+  }
+}
+
+tests {
+  test("should return 201 status", () => {
+    expect(res.getStatus()).to.equal(201);
+  });
+  
+  test("should return published agent info", () => {
+    expect(res.getBody()).to.have.property('success', true);
+    expect(res.getBody()).to.have.property('agent');
+    
+    const agent = res.getBody().agent;
+    expect(agent).to.have.property('name');
+    expect(agent).to.have.property('owner');
+    expect(agent).to.have.property('version');
+    expect(agent).to.have.property('publishedAt');
+  });
+}
+
+docs {
+  Publish a new agent or new version of an existing agent.
+  Requires authentication.
+  
+  Body:
+  - name: Agent name (3-50 chars, lowercase alphanumeric with hyphens)
+  - description: Description (10-500 chars, optional)
+  - visibility: "public" or "private"
+  - version: Semantic version (e.g., "1.0.0")
+  - content: Agent code (max 100KB)
+  - tags: Array of tags (max 10, optional)
+  - changelog: Version changelog (max 1000 chars, optional)
+  - readme: README content (max 50KB, optional)
+}

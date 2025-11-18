@@ -1,0 +1,37 @@
+meta {
+  name: GET /api/agents/:owner/:name
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/agents/testuser/my-agent
+  body: none
+  auth: inherit
+}
+
+tests {
+  test("should return 200 status", () => {
+    expect(res.getStatus()).to.equal(200);
+  });
+  
+  test("should return agent detail", () => {
+    expect(res.getBody()).to.have.property('success', true);
+    expect(res.getBody()).to.have.property('data');
+    
+    const agent = res.getBody().data;
+    expect(agent).to.have.property('name');
+    expect(agent).to.have.property('owner');
+    expect(agent).to.have.property('latestVersion');
+    expect(agent).to.have.property('content');
+    expect(agent).to.have.property('stats');
+  });
+}
+
+docs {
+  Get agent details including latest version content.
+  
+  Path Parameters:
+  - owner: Username of the agent owner
+  - name: Agent name (lowercase alphanumeric with hyphens)
+}

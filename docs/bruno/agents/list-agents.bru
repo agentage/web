@@ -1,0 +1,56 @@
+meta {
+  name: GET /api/agents
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/agents?page=1&limit=20
+  body: none
+  auth: inherit
+}
+
+params:query {
+  page: 1
+  limit: 20
+  ~visibility: public
+  ~sort: downloads
+}
+
+tests {
+  test("should return 200 status", () => {
+    expect(res.getStatus()).to.equal(200);
+  });
+  
+  test("should return agents list with pagination", () => {
+    expect(res.getBody()).to.have.property('agents');
+    expect(res.getBody().agents).to.be.an('array');
+    expect(res.getBody()).to.have.property('pagination');
+    expect(res.getBody().pagination).to.have.property('page');
+    expect(res.getBody().pagination).to.have.property('total');
+  });
+  
+  test("should return agents in UI format", () => {
+    const body = res.getBody();
+    if (body.agents.length > 0) {
+      const agent = body.agents[0];
+      expect(agent).to.have.property('name');
+      expect(agent).to.have.property('owner');
+      expect(agent).to.have.property('latestVersion');
+      expect(agent).to.have.property('downloads');
+      expect(agent).to.have.property('visibility');
+    }
+  });
+}
+
+docs {
+  List agents with pagination and filtering.
+  
+  Query Parameters:
+  - page: Page number (default: 1)
+  - limit: Items per page (1-100, default: 20)
+  - visibility: Filter by visibility (public/private/all)
+  - sort: Sort by (downloads/updated/created/name)
+  - owner: Filter by owner username
+  - tag: Filter by tag
+}
