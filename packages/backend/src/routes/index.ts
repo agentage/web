@@ -8,6 +8,7 @@ import { ServiceProvider } from '../services';
 import { AppServiceMap } from '../services/app.services';
 
 // Route Modules
+import { getAgentsRouter } from './agents';
 import { getHealthCheckRouter } from './health/health';
 import { getStatusRouter } from './status';
 
@@ -23,13 +24,16 @@ export const getRouters = (serviceProvider: ServiceProvider<AppServiceMap>) => {
   // Status Monitoring Routes
   router.use('/api/status', getStatusRouter(serviceProvider));
 
+  // Agents Routes
+  router.use('/api/agents', getAgentsRouter(serviceProvider));
+
   // Future routes will be added here:
   // router.use('/api/auth', getAuthRouter(serviceProvider));
-  // router.use('/api/agents', getAgentsRouter(serviceProvider));
 
   return router;
 };
 
 // Individual Route Exports (for testing and selective imports)
+export { getAgentsRouter } from './agents';
 export { getHealthCheckRouter } from './health/health';
 export { createStatusRouter, getStatusRouter } from './status';

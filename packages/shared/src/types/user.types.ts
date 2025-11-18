@@ -1,0 +1,107 @@
+/**
+ * User Types
+ * Shared types for user documents and requests
+ */
+
+import { z } from 'zod';
+
+/**
+ * Provider data schema (OAuth providers)
+ */
+export const providerDataSchema = z.object({
+  id: z.string(),
+  email: z.string(),
+  connectedAt: z.date(),
+});
+
+/**
+ * User preferences schema
+ */
+export const userPreferencesSchema = z.object({
+  theme: z.enum(['light', 'dark', 'system']).optional(),
+  emailNotifications: z.boolean().optional(),
+});
+
+/**
+ * User document interface
+ * Uses string _id (GUID) to match agent schema
+ */
+export interface UserDocument {
+  _id: string; // GUID
+  email: string;
+  name: string;
+  avatarUrl?: string;
+  githubId?: string;
+  githubUsername?: string;
+  role: 'user' | 'admin';
+  isActive: boolean;
+  lastLoginAt?: Date;
+  providers: {
+    google?: {
+      id: string;
+      email: string;
+      connectedAt: Date;
+    };
+    github?: {
+      id: string;
+      email: string;
+      connectedAt: Date;
+    };
+  };
+  preferences?: {
+    theme?: 'light' | 'dark' | 'system';
+    emailNotifications?: boolean;
+  };
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/**
+ * Zod schemas for request validation
+ */
+
+export const createUserSchema = z.object({
+  email: z.string().email(),
+  name: z.string().min(1).max(100),
+  avatarUrl: z.string().url().optional(),
+  githubId: z.string().optional(),
+  githubUsername: z.string().optional(),
+  providers: z
+    .object({
+      google: providerDataSchema.optional(),
+      github: providerDataSchema.optional(),
+    })
+    .optional(),
+});
+
+export const updateUserSchema = z.object({
+  name: z.string().min(1).max(100).optional(),
+  avatarUrl: z.string().url().optional(),
+  preferences: userPreferencesSchema.optional(),
+});
+
+export type CreateUserRequest = z.infer<typeof createUserSchema>;
+export type UpdateUserRequest = z.infer<typeof updateUserSchema>;
+
+/**
+ * UI Response types
+ */
+export interface UserUiResponse {
+  id: string;
+  email: string;
+  name: string;
+  avatarUrl?: string;
+  githubUsername?: string;
+  role: 'user' | 'admin';
+  createdAt: string;
+}
+
+export interface UserDetailUiResponse extends UserUiResponse {
+  isActive: boolean;
+  lastLoginAt?: string;
+  preferences?: {
+    theme?: 'light' | 'dark' | 'system';
+    emailNotifications?: boolean;
+  };
+  updatedAt: string;
+}

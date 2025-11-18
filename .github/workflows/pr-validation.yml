@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       push-images:
-        description: 'Push images to registry'
+        description: "Push images to registry"
         required: false
         type: boolean
         default: false
@@ -21,7 +21,7 @@ permissions:
 
 env:
   REGISTRY: ghcr.io
-  NODE_VERSION: '20'
+  NODE_VERSION: "20"
 
 jobs:
   validate-workspace:
@@ -39,7 +39,7 @@ jobs:
         id: validate
         uses: ./.github/workflows/actions/validate-workspace
         with:
-          node-version: '20'
+          node-version: "20"
 
   build-images:
     name: 🐳 Build Docker Images
