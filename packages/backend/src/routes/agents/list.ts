@@ -23,7 +23,7 @@ export const getListAgentsHandler = (serviceProvider: ServiceProvider<AppService
         sort: (req.query.sort as 'downloads' | 'updated' | 'created' | 'name') || 'downloads',
       };
 
-      const userId = (req.user as any)?.id;
+      const userId = (req.user as { id: string } | undefined)?.id;
 
       logger.info('List agents requested', { filters, userId });
 
