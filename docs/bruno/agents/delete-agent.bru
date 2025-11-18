@@ -1,0 +1,34 @@
+meta {
+  name: DELETE /api/agents/:owner/:name
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{baseUrl}}/api/agents/testuser/my-agent
+  body: none
+  auth: inherit
+}
+
+tests {
+  test("should return 200 status", () => {
+    expect(res.getStatus()).to.equal(200);
+  });
+  
+  test("should confirm deletion", () => {
+    expect(res.getBody()).to.have.property('success', true);
+    expect(res.getBody()).to.have.property('message');
+  });
+}
+
+docs {
+  Delete an agent and all its versions.
+  Requires authentication and ownership.
+  
+  Path Parameters:
+  - owner: Username of the agent owner
+  - name: Agent name
+  
+  Query Parameters (optional):
+  - version: Delete specific version instead of entire agent
+}

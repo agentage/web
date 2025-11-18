@@ -1,0 +1,43 @@
+meta {
+  name: GET /api/agents/:owner/:name/versions
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/api/agents/testuser/my-agent/versions
+  body: none
+  auth: inherit
+}
+
+tests {
+  test("should return 200 status", () => {
+    expect(res.getStatus()).to.equal(200);
+  });
+  
+  test("should return versions list", () => {
+    expect(res.getBody()).to.have.property('name');
+    expect(res.getBody()).to.have.property('owner');
+    expect(res.getBody()).to.have.property('versions');
+    expect(res.getBody().versions).to.be.an('array');
+  });
+  
+  test("should have version details", () => {
+    const body = res.getBody();
+    if (body.versions.length > 0) {
+      const version = body.versions[0];
+      expect(version).to.have.property('version');
+      expect(version).to.have.property('publishedAt');
+      expect(version).to.have.property('downloads');
+      expect(version).to.have.property('isLatest');
+    }
+  });
+}
+
+docs {
+  List all versions of an agent.
+  
+  Path Parameters:
+  - owner: Username of the agent owner
+  - name: Agent name
+}
