@@ -1,4 +1,5 @@
 import { Db, MongoClient } from 'mongodb';
+import { TypedDb } from './typed-db';
 
 /**
  * Simple service interface
@@ -30,7 +31,7 @@ export interface LoggerService extends Service {
  * MongoDB Service
  */
 export interface MongoService extends Service {
-  getDb(): Db;
+  getDb(): TypedDb;
   healthCheck(): Promise<{ connected: boolean }>;
   disconnect(): Promise<void>;
 }
@@ -43,11 +44,11 @@ export interface AppServiceMap extends Record<string, Service> {
   config: ConfigService;
   logger: LoggerService;
   mongo: MongoService;
+  agent: import('./agent.service').AgentService;
   // Future services will be added here:
   // jwt: JwtService;
   // oauth: OAuthService;
   // user: UserService;
-  // agent: AgentService;
 }
 
 /**
@@ -142,6 +143,7 @@ function createLoggerService(serviceName: string): LoggerService {
 function createMongoService(): MongoService {
   let client: MongoClient | null = null;
   let db: Db | null = null;
+  let typedDb: TypedDb | null = null;
 
   return {
     async initialize() {
@@ -153,6 +155,7 @@ function createMongoService(): MongoService {
 
         const dbName = uri.split('/').pop()?.split('?')[0] || 'agentage';
         db = client.db(dbName);
+        typedDb = new TypedDb(db);
 
         console.log(`✅ Connected to MongoDB: ${dbName}`);
       } catch (error) {
@@ -161,11 +164,11 @@ function createMongoService(): MongoService {
       }
     },
 
-    getDb(): Db {
-      if (!db) {
+    getDb(): TypedDb {
+      if (!typedDb) {
         throw new Error('Database not initialized. Call initialize() first.');
       }
-      return db;
+      return typedDb;
     },
 
     async healthCheck(): Promise<{ connected: boolean }> {
@@ -183,6 +186,7 @@ function createMongoService(): MongoService {
         await client.close();
         client = null;
         db = null;
+        typedDb = null;
         console.log('✅ Disconnected from MongoDB');
       }
     },
@@ -195,9 +199,30 @@ function createMongoService(): MongoService {
 export function createAppServiceProvider(): ServiceProvider<AppServiceMap> {
   const provider = new ServiceProvider<AppServiceMap>();
 
-  provider.register('config', createConfigService());
-  provider.register('logger', createLoggerService('backend'));
-  provider.register('mongo', createMongoService());
+  const config = createConfigService();
+  const logger = createLoggerService('backend');
+  const mongo = createMongoService();
+
+  provider.register('config', config);
+  provider.register('logger', logger);
+  provider.register('mongo', mongo);
+
+  // Agent service will be registered after initialization
+  let agentServiceRegistered = false;
+  const originalInitialize = provider.initialize.bind(provider);
+  provider.initialize = async function () {
+    await originalInitialize();
+
+    // Register agent service after mongo is initialized
+    if (!agentServiceRegistered) {
+      const { createAgentService } = require('./agent.service');
+      const db = mongo.getDb();
+      const agentService = createAgentService(db, logger);
+      provider.register('agent', agentService);
+      await agentService.initialize();
+      agentServiceRegistered = true;
+    }
+  };
 
   return provider;
 }

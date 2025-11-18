@@ -4,6 +4,7 @@
  */
 
 // Service Providers and Configuration
+export * from './agent.service';
 export * from './app.services';
 
 // Type Re-exports for convenience
@@ -16,8 +17,9 @@ export type {
   ServiceProvider,
 } from './app.services';
 
+export type { AgentService } from './agent.service';
+
 // Future service exports will go here:
 // export * from './jwt';
 // export * from './oauth';
 // export * from './user';
-// export * from './agent';
