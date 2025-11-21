@@ -86,7 +86,29 @@ GOOGLE_CLIENT_SECRET=your-google-client-secret-here
 GOOGLE_CALLBACK_URL=http://localhost:3001/api/auth/google/callback
 ```
 
-### 5. Build and Start the Server
+### 5. Set Up Microsoft OAuth (Optional)
+
+1. Go to https://portal.azure.com
+2. Navigate to "Azure Active Directory" → "App registrations"
+3. Click "New registration"
+4. Fill in the details:
+   - **Name**: Agentage (Development)
+   - **Supported account types**: Select "Accounts in any organizational directory and personal Microsoft accounts"
+   - **Redirect URI**: Select "Web" and enter `http://localhost:3001/api/auth/microsoft/callback`
+5. Click "Register"
+6. Copy the **Application (client) ID**
+7. Go to "Certificates & secrets" → "New client secret"
+8. Add a description and expiration period, then click "Add"
+9. Copy the **Client Secret** value (you won't be able to see it again)
+10. Add to `.env`:
+
+```bash
+MICROSOFT_CLIENT_ID=your-microsoft-client-id-here
+MICROSOFT_CLIENT_SECRET=your-microsoft-client-secret-here
+MICROSOFT_CALLBACK_URL=http://localhost:3001/api/auth/microsoft/callback
+```
+
+### 6. Build and Start the Server
 
 ```bash
 # Build shared package
@@ -106,6 +128,8 @@ npm run dev
 - `GET /api/auth/github/callback` - GitHub OAuth callback
 - `GET /api/auth/google` - Initiate Google OAuth login
 - `GET /api/auth/google/callback` - Google OAuth callback
+- `GET /api/auth/microsoft` - Initiate Microsoft OAuth login
+- `GET /api/auth/microsoft/callback` - Microsoft OAuth callback
 - `POST /api/auth/logout` - Logout (client-side token removal)
 
 ### Protected Endpoints (Require JWT Token)
@@ -226,7 +250,7 @@ The JWT token contains:
 1. **Use HTTPS**: Always use HTTPS in production
 2. **Strong JWT Secret**: Use a random 32+ character secret
 3. **Update Callback URLs**: Update OAuth callback URLs to production domain
-4. **Rotate Secrets**: Periodically rotate JWT secret
+4. **Rotate Secrets**: Periodically rotate JWT secret and OAuth client secrets
 5. **Monitor Failed Attempts**: Log and monitor failed authentication attempts
 
 ### Environment-Specific Configurations
@@ -234,10 +258,14 @@ The JWT token contains:
 ```bash
 # Development
 GITHUB_CALLBACK_URL=http://localhost:3001/api/auth/github/callback
+GOOGLE_CALLBACK_URL=http://localhost:3001/api/auth/google/callback
+MICROSOFT_CALLBACK_URL=http://localhost:3001/api/auth/microsoft/callback
 FRONTEND_FQDN=localhost:3000
 
 # Production
 GITHUB_CALLBACK_URL=https://api.agentage.io/api/auth/github/callback
+GOOGLE_CALLBACK_URL=https://api.agentage.io/api/auth/google/callback
+MICROSOFT_CALLBACK_URL=https://api.agentage.io/api/auth/microsoft/callback
 FRONTEND_FQDN=agentage.io
 ```
 
@@ -293,6 +321,11 @@ The authentication system creates a `users` collection with this structure:
       id: "67890",
       email: "user@example.com",
       connectedAt: Date
+    },
+    microsoft: {
+      id: "abcdef",
+      email: "user@example.com",
+      connectedAt: Date
     }
   },
   createdAt: Date,
@@ -307,6 +340,7 @@ The following indexes are automatically created:
 - `email` (unique)
 - `providers.github.id` (unique, sparse)
 - `providers.google.id` (unique, sparse)
+- `providers.microsoft.id` (unique, sparse)
 - `role`
 - `isActive`
 
