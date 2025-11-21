@@ -102,7 +102,6 @@ temp/
 .cursor/rules/nx-rules.mdc
 .github/instructions/nx.instructions.md
 
-specs/
 logs
 dev-debug.log
 # Dependency directories
