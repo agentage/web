@@ -33,7 +33,7 @@ const Logo = () => (
 export const Header = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
-  const { user, isAuthenticated, isLoading, login, logout } = useAuth();
+  const { user, isAuthenticated, isLoading, isMounted, login, logout } = useAuth();
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -52,12 +52,12 @@ export const Header = () => {
               </span>
             </div>
             <div className="flex items-center space-x-4">
-              <a href="/privacy" className="text-gray-500 hover:text-blue-600 transition-colors">
+              <Link href="/privacy" className="text-gray-500 hover:text-blue-600 transition-colors">
                 Privacy
-              </a>
-              <a href="/terms" className="text-gray-500 hover:text-blue-600 transition-colors">
+              </Link>
+              <Link href="/terms" className="text-gray-500 hover:text-blue-600 transition-colors">
                 Terms
-              </a>
+              </Link>
               <a
                 href="https://github.com/agentage/"
                 target="_blank"
@@ -129,7 +129,7 @@ export const Header = () => {
                 </svg>
                 Status
               </Link>
-              <a
+              <Link
                 href="/contact"
                 className="flex items-center px-4 py-2 text-gray-700 hover:text-blue-600 hover:bg-slate-50 rounded-xl font-medium transition-all group"
               >
@@ -147,15 +147,21 @@ export const Header = () => {
                   />
                 </svg>
                 Contact
-              </a>
+              </Link>
             </nav>
 
             {/* Right Section - Enhanced Actions */}
             <div className="flex items-center space-x-3">
               {/* Auth Section */}
-              {isLoading ? (
-                // Loading skeleton
-                <div className="w-8 h-8 rounded-full bg-gray-200 animate-pulse" />
+              {!isMounted ? (
+                // SSR: Render empty space to avoid hydration mismatch
+                <div className="w-[75px]" />
+              ) : isLoading ? (
+                // Client-side loading: Show skeleton
+                <div className="flex items-center space-x-2 px-3 py-2">
+                  <div className="w-8 h-8 rounded-full bg-gray-200 animate-pulse" />
+                  <div className="w-4 h-4 bg-gray-200 rounded animate-pulse" />
+                </div>
               ) : isAuthenticated && user ? (
                 // Authenticated: Show user menu
                 <UserMenu user={user} onLogout={logout} />
@@ -270,7 +276,7 @@ export const Header = () => {
                   </svg>
                   Status
                 </Link>
-                <a
+                <Link
                   href="/contact"
                   className="flex items-center px-4 py-3 text-gray-700 hover:text-blue-600 hover:bg-slate-50 rounded-xl font-medium transition-all group"
                   onClick={toggleMobileMenu}
@@ -289,7 +295,7 @@ export const Header = () => {
                     />
                   </svg>
                   Contact
-                </a>
+                </Link>
                 <div className="pt-4 border-t border-gray-200 space-y-3">
                   {/* Auth Section */}
                   {isAuthenticated && user ? (

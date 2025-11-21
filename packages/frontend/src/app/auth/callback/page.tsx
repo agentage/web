@@ -16,6 +16,9 @@ function AuthCallbackContent() {
       // Store the JWT token
       authApi.storeToken(token);
 
+      // Trigger storage event to notify other components
+      window.dispatchEvent(new Event('auth-token-changed'));
+
       // Redirect to home page
       router.push('/');
     } else {

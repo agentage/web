@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { LoginButton } from './LoginButton';
 
 interface LoginModalProps {
@@ -59,13 +60,13 @@ export const LoginModal = ({ isOpen, onClose, onLogin }: LoginModalProps) => {
           {/* Terms */}
           <p className="text-xs text-gray-500 text-center mt-6">
             By signing in, you agree to our{' '}
-            <a href="/terms" className="text-blue-600 hover:underline">
+            <Link href="/terms" className="text-blue-600 hover:underline">
               Terms of Service
-            </a>{' '}
+            </Link>{' '}
             and{' '}
-            <a href="/privacy" className="text-blue-600 hover:underline">
+            <Link href="/privacy" className="text-blue-600 hover:underline">
               Privacy Policy
-            </a>
+            </Link>
           </p>
         </div>
       </div>

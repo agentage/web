@@ -43,7 +43,6 @@ export const UserMenu = ({ user, onLogout }: UserMenuProps) => {
             {user.name.charAt(0).toUpperCase()}
           </div>
         )}
-        <span className="hidden md:block text-sm font-medium text-gray-700">{user.name}</span>
         <svg
           className={`w-4 h-4 text-gray-500 transition-transform ${isOpen ? 'rotate-180' : ''}`}
           fill="none"

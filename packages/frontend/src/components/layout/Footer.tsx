@@ -51,14 +51,14 @@ export const Footer = () => {
               <h4 className="font-semibold text-white mb-4">Legal</h4>
               <ul className="space-y-2 text-sm">
                 <li>
-                  <a href="/privacy" className="text-gray-400 hover:text-white transition-colors">
+                  <Link href="/privacy" className="text-gray-400 hover:text-white transition-colors">
                     Privacy Policy
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <a href="/terms" className="text-gray-400 hover:text-white transition-colors">
+                  <Link href="/terms" className="text-gray-400 hover:text-white transition-colors">
                     Terms of Service
-                  </a>
+                  </Link>
                 </li>
               </ul>
             </div>
@@ -68,14 +68,14 @@ export const Footer = () => {
               <h4 className="font-semibold text-white mb-4">Company</h4>
               <ul className="space-y-2 text-sm">
                 <li>
-                  <a href="/about" className="text-gray-400 hover:text-white transition-colors">
+                  <Link href="/about" className="text-gray-400 hover:text-white transition-colors">
                     About
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <a href="/contact" className="text-gray-400 hover:text-white transition-colors">
+                  <Link href="/contact" className="text-gray-400 hover:text-white transition-colors">
                     Contact
-                  </a>
+                  </Link>
                 </li>
                 <li>
                   <a
@@ -98,12 +98,12 @@ export const Footer = () => {
                 © {new Date().getFullYear()} Agentage. All rights reserved.
               </div>
               <div className="flex space-x-6 text-sm">
-                <a href="/privacy" className="text-gray-400 hover:text-white transition-colors">
+                <Link href="/privacy" className="text-gray-400 hover:text-white transition-colors">
                   Privacy Policy
-                </a>
-                <a href="/terms" className="text-gray-400 hover:text-white transition-colors">
+                </Link>
+                <Link href="/terms" className="text-gray-400 hover:text-white transition-colors">
                   Terms of Service
-                </a>
+                </Link>
               </div>
             </div>
           </div>
