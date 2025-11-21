@@ -1,6 +1,7 @@
 import passport from 'passport';
 import { Strategy as GitHubStrategy } from 'passport-github2';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
+import { Strategy as MicrosoftStrategy } from 'passport-microsoft';
 import type { ConfigService, LoggerService, Service } from '../app.services';
 import type { UserService } from '../user';
 
@@ -147,6 +148,81 @@ export const createOAuthService = (
         logger.info('Google OAuth strategy configured');
       } else {
         logger.warn('Google OAuth not configured - missing credentials');
+      }
+
+      // ===================================================================
+      // Microsoft OAuth Strategy
+      // ===================================================================
+      const microsoftClientId = config.get('MICROSOFT_CLIENT_ID');
+      const microsoftClientSecret = config.get('MICROSOFT_CLIENT_SECRET');
+      const microsoftCallbackUrl = config.get('MICROSOFT_CALLBACK_URL');
+
+      if (microsoftClientId && microsoftClientSecret && microsoftCallbackUrl) {
+        logger.info('Configuring Microsoft OAuth strategy...', {
+          clientId: microsoftClientId.substring(0, 8) + '...',
+          callbackUrl: microsoftCallbackUrl,
+        });
+
+        passport.use(
+          new MicrosoftStrategy(
+            {
+              clientID: microsoftClientId,
+              clientSecret: microsoftClientSecret,
+              callbackURL: microsoftCallbackUrl,
+              scope: ['user.read'],
+            },
+            async (
+              _accessToken: string,
+              _refreshToken: string,
+              profile: any,
+              done: (error: Error | null, user?: Express.User | false) => void
+            ) => {
+              try {
+                const email = profile.emails?.[0]?.value;
+                if (!email) {
+                  return done(new Error('No email provided by Microsoft'));
+                }
+
+                const userDoc = await user.findOrCreateUser({
+                  provider: 'microsoft',
+                  providerId: profile.id,
+                  email,
+                  name: profile.displayName || email,
+                  avatar: profile.photos?.[0]?.value,
+                });
+
+                const expressUser: Express.User = {
+                  id: userDoc._id!,
+                  _id: userDoc._id!,
+                  email: userDoc.email,
+                  displayName: userDoc.name,
+                  avatar: userDoc.avatar,
+                  providers: userDoc.providers,
+                  role: userDoc.role,
+                  createdAt: userDoc.createdAt,
+                  updatedAt: userDoc.updatedAt,
+                };
+
+                logger.info('Microsoft OAuth successful', {
+                  userId: userDoc._id,
+                  email: userDoc.email,
+                });
+
+                done(null, expressUser);
+              } catch (error) {
+                logger.error('Microsoft OAuth error', { error });
+                done(error as Error);
+              }
+            }
+          )
+        );
+        logger.info('Microsoft OAuth strategy configured');
+      } else {
+        logger.warn('Microsoft OAuth not configured - missing credentials', {
+          hasClientId: !!microsoftClientId,
+          hasClientSecret: !!microsoftClientSecret,
+          hasCallbackUrl: !!microsoftCallbackUrl,
+        });
       }
 
       // Passport serialization (not used in stateless JWT, but required by passport)

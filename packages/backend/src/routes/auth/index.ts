@@ -134,6 +134,60 @@ export const getAuthRouter = (serviceProvider: ServiceProvider<AppServiceMap>) =
   );
 
   // ===================================================================
+  // Microsoft OAuth Routes
+  // ===================================================================
+
+  router.get('/microsoft', async (req: Request, res: Response, next) => {
+    try {
+      const logger = await serviceProvider.get('logger');
+      logger.info('Microsoft OAuth initiated', {
+        ip: req.ip,
+        userAgent: req.get('User-Agent'),
+      });
+
+      passport.authenticate('microsoft', { scope: ['user.read'] })(req, res, next);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.get(
+    '/microsoft/callback',
+    passport.authenticate('microsoft', { session: false, failureRedirect: '/login' }),
+    async (req: Request, res: Response, next) => {
+      try {
+        const logger = await serviceProvider.get('logger');
+        const jwtService = await serviceProvider.get('jwt');
+        const config = await serviceProvider.get('config');
+
+        if (!req.user) {
+          return res.status(401).json({ error: 'Authentication failed' });
+        }
+
+        // Generate JWT token
+        const token = jwtService.generateToken({
+          userId: req.user.id || req.user._id?.toString() || '',
+          email: req.user.email,
+          role: req.user.role,
+        });
+
+        logger.info('Microsoft OAuth callback successful - JWT generated', {
+          userId: req.user.id,
+          email: req.user.email,
+        });
+
+        // Redirect to frontend with token
+        const frontendFqdn = config.get('FRONTEND_FQDN', 'localhost:3000');
+        const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
+        const redirectUrl = `${protocol}://${frontendFqdn}/auth/callback?token=${token}`;
+        res.redirect(redirectUrl);
+      } catch (error) {
+        next(error);
+      }
+    }
+  );
+
+  // ===================================================================
   // User Info & Management Routes (JWT-protected)
   // ===================================================================
 

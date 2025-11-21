@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
 
 export function ContactForm() {
@@ -118,13 +119,13 @@ export function ContactForm() {
           />
           <label htmlFor="privacy" className="ml-2 text-sm text-gray-600">
             I agree to the{' '}
-            <a href="/privacy" className="text-blue-600 hover:text-blue-700">
+            <Link href="/privacy" className="text-blue-600 hover:text-blue-700">
               Privacy Policy
-            </a>{' '}
+            </Link>{' '}
             and{' '}
-            <a href="/terms" className="text-blue-600 hover:text-blue-700">
+            <Link href="/terms" className="text-blue-600 hover:text-blue-700">
               Terms of Service
-            </a>
+            </Link>
           </label>
         </div>
 

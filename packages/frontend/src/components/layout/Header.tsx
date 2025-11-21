@@ -2,6 +2,8 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
+import { useAuth } from '../../lib/hooks';
+import { LoginModal, UserMenu } from '../auth';
 
 // Logo Component - Enhanced/Premium Style
 const Logo = () => (
@@ -30,6 +32,8 @@ const Logo = () => (
 
 export const Header = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const { user, isAuthenticated, isLoading, isMounted, login, logout } = useAuth();
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -48,12 +52,12 @@ export const Header = () => {
               </span>
             </div>
             <div className="flex items-center space-x-4">
-              <a href="/privacy" className="text-gray-500 hover:text-blue-600 transition-colors">
+              <Link href="/privacy" className="text-gray-500 hover:text-blue-600 transition-colors">
                 Privacy
-              </a>
-              <a href="/terms" className="text-gray-500 hover:text-blue-600 transition-colors">
+              </Link>
+              <Link href="/terms" className="text-gray-500 hover:text-blue-600 transition-colors">
                 Terms
-              </a>
+              </Link>
               <a
                 href="https://github.com/agentage/"
                 target="_blank"
@@ -125,7 +129,7 @@ export const Header = () => {
                 </svg>
                 Status
               </Link>
-              <a
+              <Link
                 href="/contact"
                 className="flex items-center px-4 py-2 text-gray-700 hover:text-blue-600 hover:bg-slate-50 rounded-xl font-medium transition-all group"
               >
@@ -143,11 +147,34 @@ export const Header = () => {
                   />
                 </svg>
                 Contact
-              </a>
+              </Link>
             </nav>
 
             {/* Right Section - Enhanced Actions */}
             <div className="flex items-center space-x-3">
+              {/* Auth Section */}
+              {!isMounted ? (
+                // SSR: Render empty space to avoid hydration mismatch
+                <div className="w-[75px]" />
+              ) : isLoading ? (
+                // Client-side loading: Show skeleton
+                <div className="flex items-center space-x-2 px-3 py-2">
+                  <div className="w-8 h-8 rounded-full bg-gray-200 animate-pulse" />
+                  <div className="w-4 h-4 bg-gray-200 rounded animate-pulse" />
+                </div>
+              ) : isAuthenticated && user ? (
+                // Authenticated: Show user menu
+                <UserMenu user={user} onLogout={logout} />
+              ) : (
+                // Not authenticated: Show login button
+                <button
+                  onClick={() => setIsLoginModalOpen(true)}
+                  className="hidden sm:block px-4 py-2 text-gray-700 hover:text-blue-600 border border-gray-300 hover:border-blue-600 rounded-xl font-medium transition-all"
+                >
+                  Login
+                </button>
+              )}
+
               {/* Get Started button */}
               <Link
                 href="/documentation"
@@ -249,7 +276,7 @@ export const Header = () => {
                   </svg>
                   Status
                 </Link>
-                <a
+                <Link
                   href="/contact"
                   className="flex items-center px-4 py-3 text-gray-700 hover:text-blue-600 hover:bg-slate-50 rounded-xl font-medium transition-all group"
                   onClick={toggleMobileMenu}
@@ -268,8 +295,37 @@ export const Header = () => {
                     />
                   </svg>
                   Contact
-                </a>
+                </Link>
                 <div className="pt-4 border-t border-gray-200 space-y-3">
+                  {/* Auth Section */}
+                  {isAuthenticated && user ? (
+                    <div className="space-y-3">
+                      <div className="px-4 py-3 bg-gray-50 rounded-lg">
+                        <p className="text-sm font-medium">{user.name}</p>
+                        <p className="text-xs text-gray-500">{user.email}</p>
+                      </div>
+                      <button
+                        onClick={() => {
+                          toggleMobileMenu();
+                          logout();
+                        }}
+                        className="w-full px-4 py-2 text-red-600 border border-red-300 hover:bg-red-50 rounded-lg font-medium transition-all"
+                      >
+                        Sign Out
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        toggleMobileMenu();
+                        setIsLoginModalOpen(true);
+                      }}
+                      className="w-full px-4 py-3 text-gray-700 border border-gray-300 hover:border-blue-600 rounded-xl font-medium transition-all text-center"
+                    >
+                      Login
+                    </button>
+                  )}
+
                   {/* Get Started */}
                   <Link
                     href="/documentation"
@@ -310,6 +366,16 @@ export const Header = () => {
           )}
         </div>
       </div>
+
+      {/* Login Modal */}
+      <LoginModal
+        isOpen={isLoginModalOpen}
+        onClose={() => setIsLoginModalOpen(false)}
+        onLogin={(provider) => {
+          setIsLoginModalOpen(false);
+          login(provider);
+        }}
+      />
     </header>
   );
 };
