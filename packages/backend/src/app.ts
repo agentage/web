@@ -1,6 +1,7 @@
 import cors from 'cors';
 import express from 'express';
 import helmet from 'helmet';
+import passport from 'passport';
 import { AppInstance } from './app.interface';
 import { createErrorHandler } from './middleware/error.middleware';
 import { getRouters } from './routes';
@@ -43,12 +44,21 @@ export const createServer = async (
   // Add UTF-8 symbols parser
   app.set('query parser', 'simple');
 
+  // Initialize Passport for OAuth
+  app.use(passport.initialize());
+
+  // Configure OAuth strategies
+  const oauthService = await serviceProvider.get('oauth');
+  oauthService.configureStrategies();
+
+  logger.info('Passport initialized and OAuth strategies configured');
+
   // Root endpoint
   app.get('/', (req, res) => {
     res.json({
       name: 'Agentage API',
       version: process.env.npm_package_version || '1.0.0',
-      endpoints: ['/api/health', '/api/status'],
+      endpoints: ['/api/health', '/api/status', '/api/auth'],
     });
   });
 

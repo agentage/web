@@ -1,5 +1,5 @@
 ---
-mode: agent
+agent: git-master
 ---
 
 Your job is to create PR.

@@ -45,10 +45,9 @@ export interface AppServiceMap extends Record<string, Service> {
   logger: LoggerService;
   mongo: MongoService;
   agent: import('./agent.service').AgentService;
-  // Future services will be added here:
-  // jwt: JwtService;
-  // oauth: OAuthService;
-  // user: UserService;
+  jwt: import('./jwt').JwtService;
+  oauth: import('./oauth').OAuthService;
+  user: import('./user').UserService;
 }
 
 /**
@@ -208,19 +207,39 @@ export function createAppServiceProvider(): ServiceProvider<AppServiceMap> {
   provider.register('mongo', mongo);
 
   // Agent service will be registered after initialization
-  let agentServiceRegistered = false;
+  let servicesRegistered = false;
   const originalInitialize = provider.initialize.bind(provider);
   provider.initialize = async function () {
     await originalInitialize();
 
-    // Register agent service after mongo is initialized
-    if (!agentServiceRegistered) {
+    // Register services after mongo is initialized
+    if (!servicesRegistered) {
       const { createAgentService } = require('./agent.service');
+      const { createJwtService } = require('./jwt');
+      const { createUserService } = require('./user');
+      const { createOAuthService } = require('./oauth');
+
       const db = mongo.getDb();
+
+      // Create services
       const agentService = createAgentService(db, logger);
+      const jwtService = createJwtService(config, logger);
+      const userService = createUserService(mongo, logger);
+      const oauthService = createOAuthService(config, userService, logger);
+
+      // Register services
       provider.register('agent', agentService);
+      provider.register('jwt', jwtService);
+      provider.register('user', userService);
+      provider.register('oauth', oauthService);
+
+      // Initialize new services
       await agentService.initialize();
-      agentServiceRegistered = true;
+      await jwtService.initialize();
+      await userService.initialize();
+      await oauthService.initialize();
+
+      servicesRegistered = true;
     }
   };
 

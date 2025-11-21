@@ -6,6 +6,9 @@
 // Agent types
 export * from './types/agent.types';
 
+// JWT types
+export * from './types/jwt.types';
+
 // User types
 export * from './types/user.types';
 
