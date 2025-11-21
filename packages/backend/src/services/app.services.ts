@@ -87,8 +87,9 @@ export class ServiceProvider<T extends Record<string, Service>> {
 function createConfigService(): ConfigService {
   return {
     async initialize() {
-      // Load .env file
-      require('dotenv').config();
+      // Load .env file from workspace root
+      const path = require('path');
+      require('dotenv').config({ path: path.resolve(__dirname, '../../../../.env') });
     },
     get(key: string, defaultValue = ''): string {
       return process.env[key] || defaultValue;
