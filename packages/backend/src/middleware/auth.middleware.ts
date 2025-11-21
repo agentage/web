@@ -62,9 +62,10 @@ export const createAuthMiddleware = (serviceProvider: ServiceProvider<AppService
         }
 
         // Attach user info to request (placeholder for JWT payload)
-        (req as Express.Request & { user?: { id: string; role: string } }).user = {
+        (req as Express.Request & { user?: { id: string; role: string; email: string } }).user = {
           id: 'anonymous',
           role: 'user',
+          email: 'anonymous@example.com',
         };
 
         next();

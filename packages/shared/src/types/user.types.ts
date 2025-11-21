@@ -23,37 +23,70 @@ export const userPreferencesSchema = z.object({
 });
 
 /**
- * User document interface
+ * User document structure in MongoDB
  * Uses string _id (GUID) to match agent schema
  */
 export interface UserDocument {
-  _id: string; // GUID
+  _id?: string; // GUID
   email: string;
-  name: string;
-  avatarUrl?: string;
-  githubId?: string;
-  githubUsername?: string;
+  name?: string;
+  avatar?: string;
   role: 'user' | 'admin';
   isActive: boolean;
-  lastLoginAt?: Date;
+
+  // OAuth provider information
   providers: {
-    google?: {
-      id: string;
-      email: string;
-      connectedAt: Date;
-    };
     github?: {
       id: string;
       email: string;
       connectedAt: Date;
     };
+    google?: {
+      id: string;
+      email: string;
+      connectedAt: Date;
+    };
+    microsoft?: {
+      id: string;
+      email: string;
+      connectedAt: Date;
+    };
   };
-  preferences?: {
-    theme?: 'light' | 'dark' | 'system';
-    emailNotifications?: boolean;
-  };
+
+  // Timestamps
   createdAt: Date;
   updatedAt: Date;
+  lastLoginAt?: Date;
+}
+
+/**
+ * User document with string ID (for backend)
+ */
+export interface UserDocumentWithStringId extends Omit<UserDocument, '_id'> {
+  _id: string;
+} /**
+ * OAuth provider profile from authentication
+ */
+export interface ProviderProfile {
+  provider: 'github' | 'google' | 'microsoft';
+  providerId: string;
+  email: string;
+  name?: string;
+  avatar?: string;
+}
+
+/**
+ * Safe user data for API responses (excludes sensitive info)
+ */
+export interface UserApiResponse {
+  id: string;
+  email: string;
+  name?: string;
+  avatar?: string;
+  role: 'user' | 'admin';
+  providers: string[]; // Just provider names, not IDs
+  createdAt: string;
+  updatedAt: string;
 }
 
 /**

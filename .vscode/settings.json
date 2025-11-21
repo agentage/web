@@ -88,5 +88,6 @@
     "javascript": true,
     "json": true
   },
-  "github.copilot.editor.enableAutoCompletions": true
+  "github.copilot.editor.enableAutoCompletions": true,
+  "containers.truncateMaxLength": 50
 }

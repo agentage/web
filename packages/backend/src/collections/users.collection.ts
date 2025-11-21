@@ -3,7 +3,7 @@
  *
  * Collection: users
  * Purpose: User accounts and authentication data
- * Documents: User profiles, authentication metadata, and preferences
+ * Documents: User profiles, authentication metadata, and OAuth providers
  */
 
 import { z } from 'zod';
@@ -18,7 +18,7 @@ export const COLLECTION_DESCRIPTION = 'User accounts and authentication data';
  */
 const providerDataSchema = z.object({
   id: z.string(),
-  email: z.string(),
+  email: z.string().email(),
   connectedAt: z.date(),
 });
 
@@ -27,16 +27,15 @@ const providerDataSchema = z.object({
  */
 export const usersCollectionSchema = z.object({
   email: z.string().email(),
-  name: z.string().min(1).max(100),
-  avatarUrl: z.string().url().optional(),
-  githubId: z.string().optional(),
-  githubUsername: z.string().optional(),
+  name: z.string().min(1).max(100).optional(),
+  avatar: z.string().url().optional(),
   role: z.enum(['user', 'admin']).default('user'),
   isActive: z.boolean().default(true),
   lastLoginAt: z.date().optional(),
   providers: z.object({
-    google: providerDataSchema.optional(),
     github: providerDataSchema.optional(),
+    google: providerDataSchema.optional(),
+    microsoft: providerDataSchema.optional(),
   }),
   preferences: z
     .object({
@@ -73,8 +72,18 @@ export const usersCollectionIndexes: IndexDefinition[] = [
   },
   {
     collection: COLLECTION_NAME,
-    key: { githubId: 1 },
+    key: { 'providers.github.id': 1 },
     options: { unique: true, sparse: true, name: 'github_id_unique' },
+  },
+  {
+    collection: COLLECTION_NAME,
+    key: { 'providers.google.id': 1 },
+    options: { unique: true, sparse: true, name: 'google_id_unique' },
+  },
+  {
+    collection: COLLECTION_NAME,
+    key: { 'providers.microsoft.id': 1 },
+    options: { unique: true, sparse: true, name: 'microsoft_id_unique' },
   },
   {
     collection: COLLECTION_NAME,
