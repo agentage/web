@@ -171,7 +171,12 @@ export const createOAuthService = (
               callbackURL: microsoftCallbackUrl,
               scope: ['user.read'],
             },
-            async (_accessToken, _refreshToken, profile, done) => {
+            async (
+              _accessToken: string,
+              _refreshToken: string,
+              profile: any,
+              done: (error: Error | null, user?: Express.User | false) => void
+            ) => {
               try {
                 const email = profile.emails?.[0]?.value;
                 if (!email) {
