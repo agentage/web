@@ -1,6 +1,54 @@
 import { z } from 'zod';
 
 // ============================================================================
+// MCP Server Configuration Types
+// ============================================================================
+
+export interface McpServerConfigHttp {
+  type: 'http';
+  url: string;
+  headers?: Record<string, string>;
+  tools?: string[];
+}
+
+export interface McpServerConfigStdio {
+  type: 'stdio';
+  command: string;
+  args?: string[];
+  env?: Record<string, string>;
+  tools?: string[];
+}
+
+export type McpServerConfig = McpServerConfigHttp | McpServerConfigStdio;
+
+export interface AgentMcpServers {
+  [serverName: string]: McpServerConfig;
+}
+
+// ============================================================================
+// Agent Section Metadata
+// ============================================================================
+
+export interface AgentSection {
+  title: string;
+  level: number;
+  startLine?: number;
+  endLine?: number;
+}
+
+// ============================================================================
+// Agent Frontmatter
+// ============================================================================
+
+export interface AgentFrontmatter {
+  name: string;
+  description: string;
+  version?: string;
+  tools?: string[];
+  'mcp-servers'?: AgentMcpServers;
+}
+
+// ============================================================================
 // Base Interfaces
 // ============================================================================
 
@@ -14,7 +62,16 @@ export interface AgentDocument {
   description?: string;
   visibility: 'public' | 'private';
   tags: string[];
+
+  // Content fields
+  contentType: 'markdown' | 'plain';
   readme?: string;
+
+  // Frontmatter data
+  agentVersion?: string;
+  tools?: string[];
+  mcpServers?: AgentMcpServers;
+  sections?: AgentSection[];
 
   // Latest version (denormalized for performance)
   latestVersion: string;
@@ -35,12 +92,50 @@ export interface AgentVersionDocument {
   // agentId references AgentDocument._id (string GUID)
   agentId: string;
   version: string;
+  contentType: 'markdown' | 'plain';
   content: string;
   changelog?: string;
+
+  // Frontmatter data
+  agentVersion?: string;
+  tools?: string[];
+  mcpServers?: AgentMcpServers;
+  sections?: AgentSection[];
+
   isLatest: boolean;
   downloads: number;
   publishedAt: Date;
 }
+// MCP Server Schemas
+export const mcpServerHttpSchema = z.object({
+  type: z.literal('http'),
+  url: z.string().url(),
+  headers: z.record(z.string()).optional(),
+  tools: z.array(z.string()).optional(),
+});
+
+export const mcpServerStdioSchema = z.object({
+  type: z.literal('stdio'),
+  command: z.string(),
+  args: z.array(z.string()).optional(),
+  env: z.record(z.string()).optional(),
+  tools: z.array(z.string()).optional(),
+});
+
+export const mcpServerConfigSchema = z.union([mcpServerHttpSchema, mcpServerStdioSchema]);
+
+export const agentMcpServersSchema = z.record(mcpServerConfigSchema);
+
+// Agent Section Schema
+export const agentSectionSchema = z.object({
+  title: z.string(),
+  level: z.number().min(1).max(6),
+  startLine: z.number().optional(),
+  endLine: z.number().optional(),
+});
+
+// Tools Schema
+export const agentToolsSchema = z.array(z.string()).optional();
 
 // ============================================================================
 // Validation Schemas
@@ -58,8 +153,9 @@ export const createAgentSchema = z.object({
     .max(500, 'Description must not exceed 500 characters')
     .optional(),
   visibility: z.enum(['public', 'private']),
-  version: z.string().regex(/^\d+\.\d+\.\d+$/, 'Version must be valid semver (e.g., 1.0.0)'),
+  version: z.string().regex(/^\d{4}-\d{2}-\d{2}[a-z]?$/, 'Version must be date-based format (e.g., 2025-10-24 or 2025-10-24a)'),
   content: z.string().min(1, 'Content is required').max(100000, 'Content must not exceed 100KB'),
+  contentType: z.enum(['markdown', 'plain']).default('markdown').optional(),
   readme: z.string().max(50000, 'README must not exceed 50KB').optional(),
   tags: z
     .array(
@@ -120,32 +216,44 @@ export interface AgentUiResponse {
   owner: string;
   description?: string;
   visibility: 'public' | 'private';
-  latestVersion: string;
-  downloads: number;
   tags: string[];
+  latestVersion: string;
+  contentType: 'markdown' | 'plain';
+  agentVersion?: string;
+  tools?: string[];
+  hasMcpServers: boolean;
+  totalDownloads: number;
+  stars: number;
+  forks: number;
   createdAt: string;
   updatedAt: string;
 }
 
 export interface AgentDetailUiResponse extends AgentUiResponse {
   readme?: string;
-  content: string;
-  stats: {
+  latestContent: string;
+  mcpServers?: AgentMcpServers;
+  sections?: AgentSection[];
+  versions: {
+    version: string;
+    agentVersion?: string;
+    publishedAt: string;
     downloads: number;
-    stars: number;
-    forks: number;
-  };
-  dependencies?: {
-    tools?: string[];
-    models?: string[];
-  };
+    isLatest: boolean;
+  }[];
 }
 
 export interface AgentVersionUiResponse {
   version: string;
-  description?: string;
-  publishedAt: string;
+  agentVersion?: string;
+  contentType: 'markdown' | 'plain';
+  content: string;
+  tools?: string[];
+  mcpServers?: AgentMcpServers;
+  sections?: AgentSection[];
+  changelog?: string;
   downloads: number;
+  publishedAt: string;
   isLatest: boolean;
 }
 

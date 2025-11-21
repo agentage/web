@@ -10,6 +10,7 @@ import { deleteAgentHandler } from './delete';
 import { getAgentHandler } from './get-agent';
 import { getAgentVersionHandler } from './get-version';
 import { getListAgentsHandler } from './list';
+import { getAgentsByMcpServerHandler, getMcpServersHandler } from './mcp-servers';
 import { publishAgentHandler } from './publish';
 import { searchAgentsHandler } from './search';
 import { updateAgentMetadataHandler } from './update-metadata';
@@ -22,6 +23,8 @@ export const getAgentsRouter = (serviceProvider: ServiceProvider<AppServiceMap>)
   // Public routes
   router.get('/', ...getListAgentsHandler(serviceProvider));
   router.get('/search', ...searchAgentsHandler(serviceProvider));
+  router.get('/mcp-servers', ...getMcpServersHandler(serviceProvider));
+  router.get('/mcp-servers/:serverName', ...getAgentsByMcpServerHandler(serviceProvider));
   router.get('/:owner/:name', ...getAgentHandler(serviceProvider));
   router.get('/:owner/:name/versions', ...getAgentVersionsHandler(serviceProvider));
   router.get('/:owner/:name/versions/:version', ...getAgentVersionHandler(serviceProvider));
@@ -38,6 +41,7 @@ export * from './delete';
 export * from './get-agent';
 export * from './get-version';
 export * from './list';
+export * from './mcp-servers';
 export * from './publish';
 export * from './search';
 export * from './update-metadata';
