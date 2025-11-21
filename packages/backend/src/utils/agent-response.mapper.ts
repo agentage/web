@@ -12,9 +12,15 @@ export function mapAgentToListResponse(agent: AgentDocument): AgentUiResponse {
     owner: agent.ownerUsername,
     description: agent.description,
     visibility: agent.visibility,
-    latestVersion: agent.latestVersion,
-    downloads: agent.totalDownloads,
     tags: agent.tags,
+    latestVersion: agent.latestVersion,
+    contentType: agent.contentType,
+    agentVersion: agent.agentVersion,
+    tools: agent.tools,
+    hasMcpServers: !!agent.mcpServers && Object.keys(agent.mcpServers).length > 0,
+    totalDownloads: agent.totalDownloads,
+    stars: agent.stars,
+    forks: agent.forks,
     createdAt: agent.createdAt.toISOString(),
     updatedAt: agent.updatedAt.toISOString(),
   };
@@ -22,31 +28,27 @@ export function mapAgentToListResponse(agent: AgentDocument): AgentUiResponse {
 
 export function mapAgentToDetailResponse(agent: AgentDocument): AgentDetailUiResponse {
   return {
-    name: agent.name,
-    owner: agent.ownerUsername,
-    description: agent.description,
-    visibility: agent.visibility,
-    latestVersion: agent.latestVersion,
-    downloads: agent.totalDownloads,
-    tags: agent.tags,
+    ...mapAgentToListResponse(agent),
     readme: agent.readme,
-    content: agent.latestContent,
-    stats: {
-      downloads: agent.totalDownloads,
-      stars: agent.stars,
-      forks: agent.forks,
-    },
-    createdAt: agent.createdAt.toISOString(),
-    updatedAt: agent.updatedAt.toISOString(),
+    latestContent: agent.latestContent,
+    mcpServers: agent.mcpServers,
+    sections: agent.sections,
+    versions: [], // Populated separately
   };
 }
 
 export function mapAgentVersionToResponse(version: AgentVersionDocument): AgentVersionUiResponse {
   return {
     version: version.version,
-    description: version.changelog,
-    publishedAt: version.publishedAt.toISOString(),
+    agentVersion: version.agentVersion,
+    contentType: version.contentType,
+    content: version.content,
+    tools: version.tools,
+    mcpServers: version.mcpServers,
+    sections: version.sections,
+    changelog: version.changelog,
     downloads: version.downloads,
+    publishedAt: version.publishedAt.toISOString(),
     isLatest: version.isLatest,
   };
 }

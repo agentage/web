@@ -2,7 +2,7 @@ import { NextFunction, Request, Response } from 'express';
 import { z } from 'zod';
 import { validateRequest } from '../../middleware/validation.middleware';
 import { AppServiceMap, ServiceProvider } from '../../services';
-import { mapAgentToDetailResponse } from '../../utils/agent-response.mapper';
+import { mapAgentVersionToResponse } from '../../utils/agent-response.mapper';
 
 export const getAgentVersionHandler = (serviceProvider: ServiceProvider<AppServiceMap>) => [
   validateRequest({
@@ -33,23 +33,7 @@ export const getAgentVersionHandler = (serviceProvider: ServiceProvider<AppServi
         });
       }
 
-      // Get agent for metadata
-      const agent = await agentService.getAgent(owner, name, userId);
-      if (!agent) {
-        return res.status(404).json({
-          success: false,
-          error: 'Not Found',
-          message: `Agent '${owner}/${name}' not found`,
-        });
-      }
-
-      // Combine agent metadata with version content
-      const response = {
-        ...mapAgentToDetailResponse(agent),
-        version: versionDoc.version,
-        content: versionDoc.content,
-        publishedAt: versionDoc.publishedAt.toISOString(),
-      };
+      const response = mapAgentVersionToResponse(versionDoc);
 
       res.json({
         success: true,

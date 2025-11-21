@@ -14,3 +14,6 @@ export * from './types/user.types';
 
 // Status types
 export * from './types/status';
+
+// Agent utilities
+export * from './utils/agent-parser';

@@ -32,7 +32,17 @@ export const getAgentHandler = (serviceProvider: ServiceProvider<AppServiceMap>)
         });
       }
 
+      // Get versions list
+      const versions = await agentService.listAgentVersions(owner, name, userId);
+
       const mappedAgent = mapAgentToDetailResponse(agent);
+      mappedAgent.versions = versions.map((v) => ({
+        version: v.version,
+        agentVersion: v.agentVersion,
+        publishedAt: v.publishedAt.toISOString(),
+        downloads: v.downloads,
+        isLatest: v.isLatest,
+      }));
 
       res.json({
         success: true,

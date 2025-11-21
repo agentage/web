@@ -1,9 +1,12 @@
 import type {
   AgentDocument,
+  AgentMcpServers,
+  AgentSection,
   AgentVersionDocument,
   CreateAgentRequest,
   UpdateAgentMetadataRequest,
 } from '@agentage/shared';
+import { isMarkdownWithFrontmatter, parseAgentMarkdown } from '@agentage/shared';
 import { randomUUID } from 'crypto';
 import * as semver from 'semver';
 import type { LoggerService, Service } from './app.services';
@@ -63,6 +66,15 @@ export interface AgentService extends Service {
 
   // Statistics
   incrementDownloads(agentId: string, version?: string): Promise<void>;
+
+  // MCP Server queries
+  findByMcpServer(
+    serverName: string,
+    page?: number,
+    limit?: number,
+    userId?: string
+  ): Promise<AgentListResult>;
+  findWithMcpServers(page?: number, limit?: number, userId?: string): Promise<AgentListResult>;
 }
 
 /**
@@ -87,6 +99,39 @@ export function createAgentService(db: TypedDb, logger: LoggerService): AgentSer
 
       const now = new Date();
       const agentId = randomUUID();
+
+      // Parse content if markdown
+      let agentVersion: string | undefined;
+      let tools: string[] | undefined;
+      let mcpServers: AgentMcpServers | undefined;
+      let sections: AgentSection[] | undefined;
+      const contentType = data.contentType || 'markdown';
+
+      if (contentType === 'markdown' && isMarkdownWithFrontmatter(data.content)) {
+        try {
+          const parsed = parseAgentMarkdown(data.content);
+          agentVersion = parsed.frontmatter.version;
+          tools = parsed.frontmatter.tools;
+          mcpServers = parsed.mcpServers;
+          sections = parsed.sections;
+
+          // Validate frontmatter name matches request name
+          if (parsed.frontmatter.name !== data.name) {
+            logger.warn('Frontmatter name differs from request name', {
+              frontmatterName: parsed.frontmatter.name,
+              requestName: data.name,
+            });
+          }
+
+          // Use frontmatter description if not provided
+          if (!data.description && parsed.frontmatter.description) {
+            data.description = parsed.frontmatter.description;
+          }
+        } catch (error) {
+          logger.error('Failed to parse agent markdown', { error });
+          throw new Error('Invalid agent markdown format');
+        }
+      }
 
       // Check if agent already exists
       // owner in agents collection is stored as a string GUID (user._id)
@@ -125,6 +170,11 @@ export function createAgentService(db: TypedDb, logger: LoggerService): AgentSer
           agentId: existingAgent._id,
           version: data.version,
           content: data.content,
+          contentType,
+          agentVersion,
+          tools,
+          mcpServers,
+          sections,
           changelog: data.changelog,
           isLatest: true,
           downloads: 0,
@@ -138,6 +188,11 @@ export function createAgentService(db: TypedDb, logger: LoggerService): AgentSer
             $set: {
               latestVersion: data.version,
               latestContent: data.content,
+              contentType,
+              agentVersion,
+              tools,
+              mcpServers,
+              sections,
               description: data.description || existingAgent.description,
               tags: data.tags || existingAgent.tags,
               readme: data.readme || existingAgent.readme,
@@ -165,6 +220,11 @@ export function createAgentService(db: TypedDb, logger: LoggerService): AgentSer
           description: data.description,
           visibility: data.visibility,
           tags: data.tags || [],
+          contentType,
+          agentVersion,
+          tools,
+          mcpServers,
+          sections,
           readme: data.readme,
           latestVersion: data.version,
           latestContent: data.content,
@@ -183,6 +243,11 @@ export function createAgentService(db: TypedDb, logger: LoggerService): AgentSer
           agentId: agentId,
           version: data.version,
           content: data.content,
+          contentType,
+          agentVersion,
+          tools,
+          mcpServers,
+          sections,
           changelog: data.changelog,
           isLatest: true,
           downloads: 0,
@@ -541,6 +606,81 @@ export function createAgentService(db: TypedDb, logger: LoggerService): AgentSer
       }
 
       await versionsCollection.updateOne(versionQuery, { $inc: { downloads: 1 } });
+    },
+
+    async findByMcpServer(
+      serverName: string,
+      page: number = 1,
+      limit: number = 20,
+      userId?: string
+    ): Promise<AgentListResult> {
+      const agentsCollection = db.collection('agents');
+
+      const query: Record<string, unknown> = {
+        [`mcpServers.${serverName}`]: { $exists: true },
+      };
+
+      // Visibility filter
+      if (!userId) {
+        query.visibility = 'public';
+      } else {
+        query.$or = [{ visibility: 'public' }, { visibility: 'private', owner: userId }];
+      }
+
+      const total = await agentsCollection.countDocuments(query);
+      const skip = (page - 1) * limit;
+
+      const agents = await agentsCollection
+        .find(query)
+        .sort({ totalDownloads: -1 })
+        .skip(skip)
+        .limit(limit)
+        .toArray();
+
+      return {
+        agents: agents as AgentDocument[],
+        total,
+        page,
+        limit,
+        hasMore: skip + limit < total,
+      };
+    },
+
+    async findWithMcpServers(
+      page: number = 1,
+      limit: number = 20,
+      userId?: string
+    ): Promise<AgentListResult> {
+      const agentsCollection = db.collection('agents');
+
+      const query: Record<string, unknown> = {
+        mcpServers: { $exists: true, $ne: null },
+      };
+
+      // Visibility filter
+      if (!userId) {
+        query.visibility = 'public';
+      } else {
+        query.$or = [{ visibility: 'public' }, { visibility: 'private', owner: userId }];
+      }
+
+      const total = await agentsCollection.countDocuments(query);
+      const skip = (page - 1) * limit;
+
+      const agents = await agentsCollection
+        .find(query)
+        .sort({ totalDownloads: -1 })
+        .skip(skip)
+        .limit(limit)
+        .toArray();
+
+      return {
+        agents: agents as AgentDocument[],
+        total,
+        page,
+        limit,
+        hasMore: skip + limit < total,
+      };
     },
   };
 }
