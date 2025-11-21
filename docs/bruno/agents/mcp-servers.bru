@@ -1,0 +1,95 @@
+meta {
+  name: GET /api/agents/mcp-servers
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/api/agents/mcp-servers?page=1&limit=20
+  body: none
+  auth: inherit
+}
+
+params:query {
+  page: 1
+  limit: 20
+}
+
+tests {
+  test("should return 200 status", () => {
+    expect(res.getStatus()).to.equal(200);
+  });
+  
+  test("should return success response", () => {
+    const body = res.getBody();
+    expect(body).to.have.property('success');
+    expect(body.success).to.equal(true);
+  });
+  
+  test("should return agents with MCP servers", () => {
+    const body = res.getBody();
+    expect(body).to.have.property('data');
+    expect(body.data).to.have.property('agents');
+    expect(body.data.agents).to.be.an('array');
+    expect(body.data).to.have.property('pagination');
+  });
+  
+  test("should have pagination metadata", () => {
+    const body = res.getBody();
+    const pagination = body.data.pagination;
+    expect(pagination).to.have.property('page');
+    expect(pagination).to.have.property('limit');
+    expect(pagination).to.have.property('total');
+    expect(pagination).to.have.property('hasMore');
+    expect(pagination.page).to.be.a('number');
+    expect(pagination.limit).to.be.a('number');
+    expect(pagination.total).to.be.a('number');
+    expect(pagination.hasMore).to.be.a('boolean');
+  });
+  
+  test("should return agents with hasMcpServers=true", () => {
+    const body = res.getBody();
+    if (body.data.agents.length > 0) {
+      body.data.agents.forEach(agent => {
+        expect(agent).to.have.property('hasMcpServers');
+        expect(agent.hasMcpServers).to.equal(true);
+      });
+    }
+  });
+  
+  test("should return agents in UI format with new fields", () => {
+    const body = res.getBody();
+    if (body.data.agents.length > 0) {
+      const agent = body.data.agents[0];
+      expect(agent).to.have.property('name');
+      expect(agent).to.have.property('owner');
+      expect(agent).to.have.property('latestVersion');
+      expect(agent).to.have.property('contentType');
+      expect(agent).to.have.property('hasMcpServers');
+      expect(agent).to.have.property('totalDownloads');
+      expect(agent).to.have.property('visibility');
+      
+      // Check for optional new fields
+      if (agent.tools) {
+        expect(agent.tools).to.be.an('array');
+      }
+      if (agent.agentVersion) {
+        expect(agent.agentVersion).to.be.a('string');
+      }
+    }
+  });
+}
+
+docs {
+  List all agents that have MCP server configurations.
+  
+  This endpoint returns only agents with MCP server configurations defined,
+  which is useful for discovering agents that provide MCP server integrations.
+  
+  Query Parameters:
+  - page: Page number (default: 1)
+  - limit: Items per page (1-100, default: 20)
+  
+  Response includes standard agent list format with pagination metadata.
+  All returned agents will have hasMcpServers=true.
+}
