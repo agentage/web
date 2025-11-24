@@ -85,11 +85,57 @@ export class ServiceProvider<T extends Record<string, Service>> {
  * Create Config Service
  */
 function createConfigService(): ConfigService {
+  const requiredEnvVars = [
+    'GITHUB_CLIENT_ID',
+    'GITHUB_CLIENT_SECRET',
+    'GITHUB_CALLBACK_URL',
+    'MICROSOFT_CLIENT_ID',
+    'MICROSOFT_CLIENT_SECRET',
+    'MICROSOFT_CALLBACK_URL',
+    'GOOGLE_CLIENT_ID',
+    'GOOGLE_CLIENT_SECRET',
+    'GOOGLE_CALLBACK_URL',
+    'MONGODB_URI',
+    'JWT_SECRET',
+    'JWT_EXPIRES_IN',
+    'FRONTEND_FQDN',
+    'API_FQDN',
+  ];
+
   return {
     async initialize() {
       // Load .env file from workspace root
       const path = require('path');
       require('dotenv').config({ path: path.resolve(__dirname, '../../../../.env') });
+
+      // Validate required environment variables
+      console.log('🔍 Validating backend environment variables...');
+      const missingVars: string[] = [];
+      const presentVars: string[] = [];
+
+      for (const varName of requiredEnvVars) {
+        const value = process.env[varName];
+        if (!value) {
+          missingVars.push(varName);
+          console.error(`❌ Missing required environment variable: ${varName}`);
+        } else {
+          presentVars.push(varName);
+        }
+      }
+
+      if (missingVars.length > 0) {
+        console.error(`\n❌ Backend configuration validation failed!`);
+        console.error(`Missing ${missingVars.length} required environment variables:`);
+        missingVars.forEach((varName) => {
+          console.error(`  - ${varName}`);
+        });
+        console.error(
+          '\n⚠️  These variables should be set from app-secrets.{env}.json during deployment'
+        );
+        throw new Error(`Missing required environment variables: ${missingVars.join(', ')}`);
+      }
+
+      console.log(`✅ All ${presentVars.length} required environment variables are set`);
     },
     get(key: string, defaultValue = ''): string {
       return process.env[key] || defaultValue;

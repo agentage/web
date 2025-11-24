@@ -25,13 +25,23 @@ An open-source platform for building, sharing, and deploying AI agents with simp
    npm install
    ```
 
-3. **Start development servers:**
+3. **Configure secrets for local development:**
+
+   ```bash
+   # Copy the template
+   cp app-secrets.dev.json app-secrets.local.json
+   
+   # Edit app-secrets.local.json with your OAuth credentials
+   # See README-SECRETS.md for detailed setup instructions
+   ```
+
+4. **Start development servers:**
 
    ```bash
    npm run dev
    ```
 
-4. **Access the application:**
+5. **Access the application:**
    - Frontend: http://localhost:3000
    - Backend API: http://localhost:3001/api/health
 
@@ -86,6 +96,13 @@ docker compose up -d
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 📚 Documentation
+
+- [Secrets Configuration Guide](README-SECRETS.md) - Setup OAuth and environment secrets
+- [Secrets Injection Process](docs/secrets-injection.md) - How secrets are deployed
+- [GitHub Secrets Setup](docs/github-secrets-setup.md) - CI/CD configuration
+- [OAuth Setup Guide](docs/auth-setup.md) - OAuth provider configuration
 
 ## 🔗 Links
 

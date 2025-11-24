@@ -32,6 +32,13 @@ packages/shared/src/**/*.d.ts
 .env.test.local
 .env.production.local
 
+# Application secrets - NEVER commit real secrets!
+app-secrets.local.json
+# Keep template files for reference but exclude them from commits
+# to prevent accidental secret leakage
+app-secrets.dev.json
+app-secrets.prod.json
+
 # IDE
 .idea/
 *.swp
