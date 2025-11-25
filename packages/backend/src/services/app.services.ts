@@ -45,6 +45,7 @@ export interface AppServiceMap extends Record<string, Service> {
   logger: LoggerService;
   mongo: MongoService;
   agent: import('./agent.service').AgentService;
+  deviceCode: import('./device-code').DeviceCodeService;
   jwt: import('./jwt').JwtService;
   oauth: import('./oauth').OAuthService;
   user: import('./user').UserService;
@@ -262,6 +263,7 @@ export function createAppServiceProvider(): ServiceProvider<AppServiceMap> {
     // Register services after mongo is initialized
     if (!servicesRegistered) {
       const { createAgentService } = require('./agent.service');
+      const { createDeviceCodeService } = require('./device-code');
       const { createJwtService } = require('./jwt');
       const { createUserService } = require('./user');
       const { createOAuthService } = require('./oauth');
@@ -273,15 +275,20 @@ export function createAppServiceProvider(): ServiceProvider<AppServiceMap> {
       const jwtService = createJwtService(config, logger);
       const userService = createUserService(mongo, logger);
       const oauthService = createOAuthService(config, userService, logger);
+      const deviceCodeService = createDeviceCodeService(mongo, jwtService, userService, logger, {
+        apiFqdn: config.get('FRONTEND_FQDN', 'localhost:3000'),
+      });
 
       // Register services
       provider.register('agent', agentService);
+      provider.register('deviceCode', deviceCodeService);
       provider.register('jwt', jwtService);
       provider.register('user', userService);
       provider.register('oauth', oauthService);
 
       // Initialize new services
       await agentService.initialize();
+      await deviceCodeService.initialize();
       await jwtService.initialize();
       await userService.initialize();
       await oauthService.initialize();

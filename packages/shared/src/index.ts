@@ -12,6 +12,9 @@ export * from './types/jwt.types';
 // User types
 export * from './types/user.types';
 
+// Device authorization types
+export * from './types/device-auth.types';
+
 // Status types
 export * from './types/status';
 

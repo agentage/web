@@ -22,7 +22,12 @@
  * ```
  */
 
-import type { AgentDocument, AgentVersionDocument, UserDocument } from '@agentage/shared';
+import type {
+  AgentDocument,
+  AgentVersionDocument,
+  DeviceCodeDocument,
+  UserDocument,
+} from '@agentage/shared';
 import type { Collection, Db } from 'mongodb';
 
 /**
@@ -33,6 +38,7 @@ export interface TypedCollections {
   agents: AgentDocument;
   agent_versions: AgentVersionDocument;
   users: UserDocument;
+  device_codes: DeviceCodeDocument;
   // Add other collections here as they are defined
   // sessions: SessionDocument;
 }
@@ -51,5 +57,13 @@ export class TypedDb {
    */
   collection<K extends keyof TypedCollections>(name: K): Collection<TypedCollections[K]> {
     return this.db.collection(name) as Collection<TypedCollections[K]>;
+  }
+
+  /**
+   * Get the raw MongoDB database for operations that need direct access
+   * (e.g., index creation)
+   */
+  getRawDb(): Db {
+    return this.db;
   }
 }
