@@ -19,7 +19,8 @@ export const getAgentVersionHandler = (serviceProvider: ServiceProvider<AppServi
       const agentService = await serviceProvider.get('agent');
 
       const { owner, name, version } = req.params;
-      const userId = (req.user as { id: string } | undefined)?.id;
+      // Support both JWT auth (userId) and OAuth callback (id/_id)
+      const userId = req.user?.userId || req.user?.id || req.user?._id?.toString();
 
       logger.info('Get agent version requested', { owner, name, version, userId });
 

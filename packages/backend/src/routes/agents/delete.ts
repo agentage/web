@@ -29,7 +29,15 @@ export const deleteAgentHandler = (serviceProvider: ServiceProvider<AppServiceMa
 
       const { owner, name } = req.params;
       const { version } = req.query;
-      const userId = (req.user as { id: string }).id;
+      // Support both JWT auth (userId) and OAuth callback (id/_id)
+      const userId = req.user.userId || req.user.id || req.user._id?.toString();
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          error: 'Unauthorized',
+          message: 'User ID not found in token',
+        });
+      }
 
       if (version) {
         logger.info('Delete agent version requested', { owner, name, version, userId });

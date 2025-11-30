@@ -7,7 +7,15 @@ meta {
 post {
   url: {{baseUrl}}/api/agents
   body: json
-  auth: inherit
+  auth: bearer
+}
+
+headers {
+  : 
+}
+
+auth:bearer {
+  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJiNWY5MWRhZi0xYTgxLTQxYWYtODFlMy1hNGZhNjZkMDg0YjIiLCJlbWFpbCI6InZyZXNoY2hAZ21haWwuY29tIiwicm9sZSI6InVzZXIiLCJpYXQiOjE3NjQ1NDA5MDksImV4cCI6MTc2NTE0NTcwOSwiYXVkIjoiYWdlbnRhZ2UuaW8iLCJpc3MiOiJhZ2VudGFnZS5pbyJ9.Se-M32todjtiXkhma8R6fE1b_vt8bTHAVwx7dSub1LM
 }
 
 body:json {
@@ -15,7 +23,7 @@ body:json {
     "name": "test-agent",
     "description": "A test agent for demonstration",
     "visibility": "public",
-    "version": "1.0.0",
+    "version": "2025-10-24a",
     "content": "export default function agent() { return 'Hello World'; }",
     "tags": ["test", "demo"],
     "changelog": "Initial release"

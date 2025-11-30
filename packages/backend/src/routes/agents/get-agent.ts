@@ -18,7 +18,8 @@ export const getAgentHandler = (serviceProvider: ServiceProvider<AppServiceMap>)
       const agentService = await serviceProvider.get('agent');
 
       const { owner, name } = req.params;
-      const userId = (req.user as { id: string } | undefined)?.id;
+      // Support both JWT auth (userId) and OAuth callback (id/_id)
+      const userId = req.user?.userId || req.user?.id || req.user?._id?.toString();
 
       logger.info('Get agent requested', { owner, name, userId });
 
