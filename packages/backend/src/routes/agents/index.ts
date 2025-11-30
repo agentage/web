@@ -4,7 +4,7 @@
  */
 
 import { Router } from 'express';
-import { createAuthMiddleware } from '../../middleware/auth.middleware';
+import { createJwtAuthMiddleware } from '../../middleware/jwt-auth.middleware';
 import { AppServiceMap, ServiceProvider } from '../../services';
 import { deleteAgentHandler } from './delete';
 import { getAgentHandler } from './get-agent';
@@ -18,7 +18,17 @@ import { getAgentVersionsHandler } from './versions';
 
 export const getAgentsRouter = (serviceProvider: ServiceProvider<AppServiceMap>) => {
   const router = Router();
-  const auth = createAuthMiddleware(serviceProvider);
+
+  // Lazy initialization of JWT auth middleware
+  let jwtAuth: ReturnType<typeof createJwtAuthMiddleware>;
+  const getJwtAuth = async () => {
+    if (!jwtAuth) {
+      const jwtService = await serviceProvider.get('jwt');
+      const userService = await serviceProvider.get('user');
+      jwtAuth = createJwtAuthMiddleware({ jwtService, userService });
+    }
+    return jwtAuth;
+  };
 
   // Public routes
   router.get('/', ...getListAgentsHandler(serviceProvider));
@@ -29,10 +39,22 @@ export const getAgentsRouter = (serviceProvider: ServiceProvider<AppServiceMap>)
   router.get('/:owner/:name/versions', ...getAgentVersionsHandler(serviceProvider));
   router.get('/:owner/:name/versions/:version', ...getAgentVersionHandler(serviceProvider));
 
-  // Protected routes
-  router.post('/', auth.requireAuth, ...publishAgentHandler(serviceProvider));
-  router.patch('/:owner/:name', auth.requireAuth, ...updateAgentMetadataHandler(serviceProvider));
-  router.delete('/:owner/:name', auth.requireAuth, ...deleteAgentHandler(serviceProvider));
+  // Protected routes - use JWT auth middleware
+  router.post(
+    '/',
+    async (req, res, next) => (await getJwtAuth()).requireAuth(req, res, next),
+    ...publishAgentHandler(serviceProvider)
+  );
+  router.patch(
+    '/:owner/:name',
+    async (req, res, next) => (await getJwtAuth()).requireAuth(req, res, next),
+    ...updateAgentMetadataHandler(serviceProvider)
+  );
+  router.delete(
+    '/:owner/:name',
+    async (req, res, next) => (await getJwtAuth()).requireAuth(req, res, next),
+    ...deleteAgentHandler(serviceProvider)
+  );
 
   return router;
 };
