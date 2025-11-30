@@ -23,7 +23,8 @@ export const getListAgentsHandler = (serviceProvider: ServiceProvider<AppService
         sort: (req.query.sort as 'downloads' | 'updated' | 'created' | 'name') || 'downloads',
       };
 
-      const userId = (req.user as { id: string } | undefined)?.id;
+      // Support both JWT auth (userId) and OAuth callback (id/_id)
+      const userId = req.user?.userId || req.user?.id || req.user?._id?.toString();
 
       logger.info('List agents requested', { filters, userId });
 

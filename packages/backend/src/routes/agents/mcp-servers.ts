@@ -19,7 +19,8 @@ export const getMcpServersHandler = (serviceProvider: ServiceProvider<AppService
 
       const page = Number(req.query.page) || 1;
       const limit = Number(req.query.limit) || 20;
-      const userId = (req.user as { id: string } | undefined)?.id;
+      // Support both JWT auth (userId) and OAuth callback (id/_id)
+      const userId = req.user?.userId || req.user?.id || req.user?._id?.toString();
 
       logger.info('List agents with MCP servers requested', { page, limit, userId });
 
@@ -62,7 +63,8 @@ export const getAgentsByMcpServerHandler = (serviceProvider: ServiceProvider<App
       const { serverName } = req.params;
       const page = Number(req.query.page) || 1;
       const limit = Number(req.query.limit) || 20;
-      const userId = (req.user as { id: string } | undefined)?.id;
+      // Support both JWT auth (userId) and OAuth callback (id/_id)
+      const userId = req.user?.userId || req.user?.id || req.user?._id?.toString();
 
       logger.info('List agents by MCP server requested', { serverName, page, limit, userId });
 

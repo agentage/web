@@ -21,7 +21,8 @@ export const searchAgentsHandler = (serviceProvider: ServiceProvider<AppServiceM
         visibility: req.query.visibility as 'public' | 'private' | 'all' | undefined,
       };
 
-      const userId = (req.user as { id: string } | undefined)?.id;
+      // Support both JWT auth (userId) and OAuth callback (id/_id)
+      const userId = req.user?.userId || req.user?.id || req.user?._id?.toString();
 
       logger.info('Search agents requested', { query, filters, userId });
 

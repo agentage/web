@@ -27,7 +27,15 @@ export const updateAgentMetadataHandler = (serviceProvider: ServiceProvider<AppS
       }
 
       const { owner, name } = req.params;
-      const userId = (req.user as { id: string }).id;
+      // Support both JWT auth (userId) and OAuth callback (id/_id)
+      const userId = req.user.userId || req.user.id || req.user._id?.toString();
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          error: 'Unauthorized',
+          message: 'User ID not found in token',
+        });
+      }
 
       logger.info('Update agent metadata requested', { owner, name, userId });
 
