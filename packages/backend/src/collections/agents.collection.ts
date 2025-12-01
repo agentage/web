@@ -44,6 +44,7 @@ export const agentsCollectionSchema = z.object({
   readme: z.string().max(50000).optional(),
   latestVersion: z.string().regex(/^\d+\.\d+\.\d+$/),
   latestContent: z.string().max(100000),
+  latestContentHash: z.string().length(64), // SHA256 hex = 64 chars
   totalDownloads: z.number().int().min(0),
   stars: z.number().int().min(0),
   forks: z.number().int().min(0),

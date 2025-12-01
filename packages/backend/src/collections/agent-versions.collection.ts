@@ -22,6 +22,7 @@ export const agentVersionsCollectionSchema = z.object({
   agentId: z.string(),
   version: z.string().regex(/^\d+\.\d+\.\d+$/),
   content: z.string().max(100000),
+  contentHash: z.string().length(64), // SHA256 hex = 64 chars
   changelog: z.string().max(1000).optional(),
   isLatest: z.boolean(),
   downloads: z.number().int().min(0),
