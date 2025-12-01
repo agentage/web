@@ -57,6 +57,7 @@ export const createOAuthService = (
                   email,
                   name: profile.displayName || profile.username || email,
                   avatar: profile.photos?.[0]?.value,
+                  username: profile.username, // GitHub username for verified alias
                 });
 
                 const expressUser: Express.User = {
@@ -65,6 +66,7 @@ export const createOAuthService = (
                   email: userDoc.email,
                   displayName: userDoc.name,
                   avatar: userDoc.avatar,
+                  verifiedAlias: userDoc.verifiedAlias,
                   providers: userDoc.providers,
                   role: userDoc.role,
                   createdAt: userDoc.createdAt,
@@ -126,6 +128,7 @@ export const createOAuthService = (
                   email: userDoc.email,
                   displayName: userDoc.name,
                   avatar: userDoc.avatar,
+                  verifiedAlias: userDoc.verifiedAlias,
                   providers: userDoc.providers,
                   role: userDoc.role,
                   createdAt: userDoc.createdAt,
@@ -197,6 +200,7 @@ export const createOAuthService = (
                   email: userDoc.email,
                   displayName: userDoc.name,
                   avatar: userDoc.avatar,
+                  verifiedAlias: userDoc.verifiedAlias,
                   providers: userDoc.providers,
                   role: userDoc.role,
                   createdAt: userDoc.createdAt,
@@ -244,6 +248,7 @@ export const createOAuthService = (
             email: userDoc.email,
             displayName: userDoc.name,
             avatar: userDoc.avatar,
+            verifiedAlias: userDoc.verifiedAlias,
             providers: userDoc.providers,
             role: userDoc.role,
             createdAt: userDoc.createdAt,
