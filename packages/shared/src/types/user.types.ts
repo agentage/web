@@ -31,6 +31,7 @@ export interface UserDocument {
   email: string;
   name?: string;
   avatar?: string;
+  verifiedAlias?: string; // Verified username/alias from OAuth provider (e.g., GitHub username)
   role: 'user' | 'admin';
   isActive: boolean;
 
@@ -73,6 +74,7 @@ export interface ProviderProfile {
   email: string;
   name?: string;
   avatar?: string;
+  username?: string; // Provider-specific username/alias (e.g., GitHub username)
 }
 
 /**
@@ -83,6 +85,7 @@ export interface UserApiResponse {
   email: string;
   name?: string;
   avatar?: string;
+  verifiedAlias?: string;
   role: 'user' | 'admin';
   providers: string[]; // Just provider names, not IDs
   createdAt: string;
@@ -124,7 +127,7 @@ export interface UserUiResponse {
   email: string;
   name: string;
   avatarUrl?: string;
-  githubUsername?: string;
+  verifiedAlias?: string;
   role: 'user' | 'admin';
   createdAt: string;
 }

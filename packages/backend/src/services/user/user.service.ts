@@ -47,7 +47,7 @@ export const createUserService = (mongo: MongoService, logger: LoggerService): U
     },
 
     async findOrCreateUser(profile: ProviderProfile): Promise<UserDocument> {
-      const { provider, providerId, email, name, avatar } = profile;
+      const { provider, providerId, email, name, avatar, username } = profile;
       const db = mongo.getDb();
       const collection = db.collection('users');
       const normalizedEmail = email.toLowerCase();
@@ -60,13 +60,18 @@ export const createUserService = (mongo: MongoService, logger: LoggerService): U
 
         // If provider already linked and matches, just update last login
         if (providerData && providerData.id === providerId) {
+          const updateFields: any = {
+            lastLoginAt: new Date(),
+            updatedAt: new Date(),
+          };
+          // Update verifiedAlias if username provided and not already set
+          if (username && !user.verifiedAlias) {
+            updateFields.verifiedAlias = username;
+          }
           await collection.updateOne(
             { _id: user._id! },
             {
-              $set: {
-                lastLoginAt: new Date(),
-                updatedAt: new Date(),
-              },
+              $set: updateFields,
             }
           );
 
@@ -77,24 +82,30 @@ export const createUserService = (mongo: MongoService, logger: LoggerService): U
 
           return {
             ...user,
+            verifiedAlias: username && !user.verifiedAlias ? username : user.verifiedAlias,
             lastLoginAt: new Date(),
             updatedAt: new Date(),
           };
         }
 
         // Auto-link new provider to existing email
+        const autoLinkUpdate: any = {
+          [`providers.${provider}`]: {
+            id: providerId,
+            email: normalizedEmail,
+            connectedAt: new Date(),
+          },
+          lastLoginAt: new Date(),
+          updatedAt: new Date(),
+        };
+        // Set verifiedAlias if username provided and not already set
+        if (username && !user.verifiedAlias) {
+          autoLinkUpdate.verifiedAlias = username;
+        }
         await collection.updateOne(
           { _id: user._id! },
           {
-            $set: {
-              [`providers.${provider}`]: {
-                id: providerId,
-                email: normalizedEmail,
-                connectedAt: new Date(),
-              },
-              lastLoginAt: new Date(),
-              updatedAt: new Date(),
-            },
+            $set: autoLinkUpdate,
           }
         );
 
@@ -114,6 +125,7 @@ export const createUserService = (mongo: MongoService, logger: LoggerService): U
         email: normalizedEmail,
         name: name || normalizedEmail.split('@')[0],
         avatar,
+        verifiedAlias: username, // Store verified alias from OAuth provider
         role: 'user',
         isActive: true,
         providers: {

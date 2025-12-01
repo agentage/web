@@ -264,6 +264,7 @@ export const getAuthRouter = (serviceProvider: ServiceProvider<AppServiceMap>) =
           email: userDoc.email,
           name: userDoc.name,
           avatar: userDoc.avatar,
+          verifiedAlias: userDoc.verifiedAlias,
           role: userDoc.role,
           providers: Object.keys(userDoc.providers),
           createdAt: userDoc.createdAt,

@@ -13,6 +13,7 @@ export interface User {
   email: string;
   name: string;
   avatar?: string;
+  verifiedAlias?: string; // Verified username/alias from OAuth provider
   role: 'user' | 'admin';
   providers: string[];
   createdAt?: string;

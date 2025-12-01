@@ -18,6 +18,7 @@ declare global {
       email: string;
       displayName?: string;
       avatar?: string;
+      verifiedAlias?: string; // Verified username/alias from OAuth provider
 
       // Provider information
       providers?: {
