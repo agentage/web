@@ -28,8 +28,10 @@ export interface JwtVerifyResult {
 export interface JwtServiceMethods {
   /**
    * Generate a new JWT token
+   * @param payload - The JWT payload
+   * @param expiresIn - Optional custom expiration (e.g., '30d', '7d', '24h')
    */
-  generateToken(payload: JwtPayload): string;
+  generateToken(payload: JwtPayload, expiresIn?: string): string;
 
   /**
    * Verify and decode a JWT token

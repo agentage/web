@@ -19,10 +19,11 @@ export const createJwtService = (config: ConfigService, logger: LoggerService): 
       });
     },
 
-    generateToken(payload: JwtPayload): string {
+    generateToken(payload: JwtPayload, expiresIn?: string): string {
       try {
+        const tokenExpiry = expiresIn || jwtExpiresIn;
         const token = jwt.sign(payload, jwtSecret, {
-          expiresIn: jwtExpiresIn,
+          expiresIn: tokenExpiry,
           issuer: 'agentage.io',
           audience: 'agentage.io',
         } as jwt.SignOptions);
@@ -31,7 +32,7 @@ export const createJwtService = (config: ConfigService, logger: LoggerService): 
           userId: payload.userId,
           email: payload.email,
           role: payload.role,
-          expiresIn: jwtExpiresIn,
+          expiresIn: tokenExpiry,
         });
 
         return token;

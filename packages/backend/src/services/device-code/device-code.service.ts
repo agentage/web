@@ -44,6 +44,7 @@ export interface DeviceCodeService extends Service {
 
 const EXPIRES_IN_SECONDS = 900; // 15 minutes
 const POLLING_INTERVAL_SECONDS = 5;
+const CLI_TOKEN_EXPIRES_IN = '30d'; // CLI/console tokens expire in 30 days
 
 /**
  * Generate a cryptographically random device code (32+ bytes base64url)
@@ -190,12 +191,15 @@ export const createDeviceCodeService = (
         return null;
       }
 
-      // Generate JWT token
-      const accessToken = jwtService.generateToken({
-        userId: user._id!,
-        email: user.email,
-        role: user.role,
-      });
+      // Generate JWT token with extended expiration for CLI usage
+      const accessToken = jwtService.generateToken(
+        {
+          userId: user._id!,
+          email: user.email,
+          role: user.role,
+        },
+        CLI_TOKEN_EXPIRES_IN
+      );
 
       // Update device code with authorization
       await collection.updateOne(
@@ -217,7 +221,7 @@ export const createDeviceCodeService = (
       return {
         access_token: accessToken,
         token_type: 'Bearer',
-        expires_in: 86400, // 24 hours (or whatever JWT_EXPIRES_IN is)
+        expires_in: 30 * 24 * 60 * 60, // 30 days in seconds
         user: {
           id: user._id!,
           email: user.email,
@@ -263,7 +267,7 @@ export const createDeviceCodeService = (
       return {
         access_token: deviceCodeDoc.accessToken,
         token_type: 'Bearer',
-        expires_in: 86400,
+        expires_in: 30 * 24 * 60 * 60, // 30 days in seconds
         user: {
           id: user._id!,
           email: user.email,
