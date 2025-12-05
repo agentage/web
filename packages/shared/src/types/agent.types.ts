@@ -76,6 +76,7 @@ export interface AgentDocument {
   // Latest version (denormalized for performance)
   latestVersion: string;
   latestContent: string;
+  latestContentHash: string; // SHA256 hash of latestContent
 
   // Statistics
   totalDownloads: number;
@@ -94,6 +95,7 @@ export interface AgentVersionDocument {
   version: string;
   contentType: 'markdown' | 'plain';
   content: string;
+  contentHash: string; // SHA256 hash of content
   changelog?: string;
 
   // Frontmatter data
@@ -232,11 +234,13 @@ export interface AgentUiResponse {
 export interface AgentDetailUiResponse extends AgentUiResponse {
   readme?: string;
   latestContent: string;
+  latestContentHash: string;
   mcpServers?: AgentMcpServers;
   sections?: AgentSection[];
   versions: {
     version: string;
     agentVersion?: string;
+    contentHash: string;
     publishedAt: string;
     downloads: number;
     isLatest: boolean;
@@ -248,6 +252,7 @@ export interface AgentVersionUiResponse {
   agentVersion?: string;
   contentType: 'markdown' | 'plain';
   content: string;
+  contentHash: string;
   tools?: string[];
   mcpServers?: AgentMcpServers;
   sections?: AgentSection[];

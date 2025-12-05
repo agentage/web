@@ -31,6 +31,7 @@ export function mapAgentToDetailResponse(agent: AgentDocument): AgentDetailUiRes
     ...mapAgentToListResponse(agent),
     readme: agent.readme,
     latestContent: agent.latestContent,
+    latestContentHash: agent.latestContentHash,
     mcpServers: agent.mcpServers,
     sections: agent.sections,
     versions: [], // Populated separately
@@ -43,6 +44,7 @@ export function mapAgentVersionToResponse(version: AgentVersionDocument): AgentV
     agentVersion: version.agentVersion,
     contentType: version.contentType,
     content: version.content,
+    contentHash: version.contentHash,
     tools: version.tools,
     mcpServers: version.mcpServers,
     sections: version.sections,

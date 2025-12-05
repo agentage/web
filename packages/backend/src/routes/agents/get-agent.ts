@@ -40,6 +40,7 @@ export const getAgentHandler = (serviceProvider: ServiceProvider<AppServiceMap>)
       mappedAgent.versions = versions.map((v) => ({
         version: v.version,
         agentVersion: v.agentVersion,
+        contentHash: v.contentHash,
         publishedAt: v.publishedAt.toISOString(),
         downloads: v.downloads,
         isLatest: v.isLatest,

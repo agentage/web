@@ -41,6 +41,7 @@ export const publishAgentHandler = (serviceProvider: ServiceProvider<AppServiceM
           name: agent.name,
           owner: agent.ownerUsername,
           version: agent.latestVersion,
+          contentHash: agent.latestContentHash,
           visibility: agent.visibility,
           publishedAt: agent.updatedAt.toISOString(),
         },
