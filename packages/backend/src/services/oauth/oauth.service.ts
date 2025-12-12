@@ -40,7 +40,7 @@ export const createOAuthService = (
               scope: ['user:email'],
             },
             async (
-              _accessToken: string,
+              accessToken: string,
               _refreshToken: string,
               profile: any,
               done: (error: Error | null, user?: Express.User | false) => void
@@ -71,6 +71,7 @@ export const createOAuthService = (
                   role: userDoc.role,
                   createdAt: userDoc.createdAt,
                   updatedAt: userDoc.updatedAt,
+                  providerToken: accessToken, // Store provider token for desktop flow
                 };
 
                 logger.info('GitHub OAuth successful', {
@@ -107,7 +108,7 @@ export const createOAuthService = (
               callbackURL: googleCallbackUrl,
               scope: ['profile', 'email'],
             },
-            async (_accessToken, _refreshToken, profile, done) => {
+            async (accessToken, _refreshToken, profile, done) => {
               try {
                 const email = profile.emails?.[0]?.value;
                 if (!email) {
@@ -133,6 +134,7 @@ export const createOAuthService = (
                   role: userDoc.role,
                   createdAt: userDoc.createdAt,
                   updatedAt: userDoc.updatedAt,
+                  providerToken: accessToken, // Store provider token for desktop flow
                 };
 
                 logger.info('Google OAuth successful', {
@@ -175,7 +177,7 @@ export const createOAuthService = (
               scope: ['user.read'],
             },
             async (
-              _accessToken: string,
+              accessToken: string,
               _refreshToken: string,
               profile: any,
               done: (error: Error | null, user?: Express.User | false) => void
@@ -205,6 +207,7 @@ export const createOAuthService = (
                   role: userDoc.role,
                   createdAt: userDoc.createdAt,
                   updatedAt: userDoc.updatedAt,
+                  providerToken: accessToken, // Store provider token for desktop flow
                 };
 
                 logger.info('Microsoft OAuth successful', {

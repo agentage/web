@@ -39,6 +39,9 @@ declare global {
         };
       };
 
+      // Provider token (for desktop OAuth flow)
+      providerToken?: string;
+
       // Authorization
       role: 'user' | 'admin';
 
