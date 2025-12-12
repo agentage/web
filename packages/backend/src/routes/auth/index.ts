@@ -12,6 +12,14 @@ import { createJwtAuthMiddleware } from '../../middleware/jwt-auth.middleware';
 import type { AppServiceMap } from '../../services';
 import type { ServiceProvider } from '../../services/app.services';
 
+// OAuth state data structure
+interface OAuthStateData {
+  device_code?: string;
+  desktop?: boolean;
+  callback?: string;
+  include_provider_token?: boolean;
+}
+
 export const getAuthRouter = (serviceProvider: ServiceProvider<AppServiceMap>) => {
   const router = Router();
 
@@ -38,14 +46,27 @@ export const getAuthRouter = (serviceProvider: ServiceProvider<AppServiceMap>) =
       // Store device code in session state if coming from device flow
       const deviceUserCode = req.query.device_code as string | undefined;
 
+      // Desktop OAuth parameters
+      const desktop = req.query.desktop === 'true';
+      const callback = req.query.callback as string | undefined;
+      const includeProviderToken = req.query.include_provider_token === 'true';
+
       logger.info('GitHub OAuth initiated', {
         ip: req.ip,
         userAgent: req.get('User-Agent'),
         isDeviceFlow: !!deviceUserCode,
+        isDesktop: desktop,
       });
 
-      // Pass device code via state parameter
-      const state = deviceUserCode ? JSON.stringify({ device_code: deviceUserCode }) : undefined;
+      // Build state parameter with all flow information
+      const stateData: OAuthStateData = {};
+      if (deviceUserCode) stateData.device_code = deviceUserCode;
+      if (desktop) {
+        stateData.desktop = true;
+        stateData.callback = callback;
+        stateData.include_provider_token = includeProviderToken;
+      }
+      const state = Object.keys(stateData).length > 0 ? JSON.stringify(stateData) : undefined;
 
       passport.authenticate('github', {
         scope: ['user:email'],
@@ -81,25 +102,58 @@ export const getAuthRouter = (serviceProvider: ServiceProvider<AppServiceMap>) =
           email: req.user.email,
         });
 
-        // Check if this is from device flow
-        let deviceUserCode: string | undefined;
+        // Parse state parameter for flow information
+        let stateData: OAuthStateData = {};
         try {
           const state = req.query.state as string;
           if (state) {
-            const stateData = JSON.parse(state);
-            deviceUserCode = stateData.device_code;
+            stateData = JSON.parse(state) as OAuthStateData;
           }
         } catch {
-          // Not a device flow or invalid state
+          // Invalid or missing state
         }
 
         const frontendFqdn = config.get('FRONTEND_FQDN', 'localhost:3000');
         const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
 
-        if (deviceUserCode) {
+        // Check for desktop flow
+        if (stateData.desktop && stateData.callback) {
+          // Validate callback is localhost
+          try {
+            const callbackUrl = new URL(stateData.callback);
+            if (callbackUrl.hostname !== 'localhost' && callbackUrl.hostname !== '127.0.0.1') {
+              logger.warn('Invalid desktop callback URL - not localhost', {
+                callback: stateData.callback,
+              });
+              return res.status(400).json({ error: 'Invalid callback URL - must be localhost' });
+            }
+
+            // Build redirect URL with token
+            callbackUrl.searchParams.set('token', token);
+
+            // Include provider token if requested
+            if (stateData.include_provider_token && req.user.providerToken) {
+              callbackUrl.searchParams.set('github_token', req.user.providerToken);
+            }
+
+            logger.info('Redirecting to desktop callback', { callback: callbackUrl.toString() });
+            return res.redirect(callbackUrl.toString());
+          } catch (error) {
+            logger.error('Error parsing desktop callback URL', {
+              error,
+              callback: stateData.callback,
+            });
+            return res.status(400).json({ error: 'Invalid callback URL format' });
+          }
+        }
+
+        // Check if this is from device flow
+        if (stateData.device_code) {
           // Redirect to device authorization page with token
-          const redirectUrl = `${protocol}://${frontendFqdn}/device/authorize?token=${token}&code=${deviceUserCode}`;
-          logger.info('Redirecting to device authorization', { deviceUserCode });
+          const redirectUrl = `${protocol}://${frontendFqdn}/device/authorize?token=${token}&code=${stateData.device_code}`;
+          logger.info('Redirecting to device authorization', {
+            deviceUserCode: stateData.device_code,
+          });
           return res.redirect(redirectUrl);
         }
 
@@ -119,12 +173,31 @@ export const getAuthRouter = (serviceProvider: ServiceProvider<AppServiceMap>) =
   router.get('/google', async (req: Request, res: Response, next) => {
     try {
       const logger = await serviceProvider.get('logger');
+
+      // Desktop OAuth parameters
+      const desktop = req.query.desktop === 'true';
+      const callback = req.query.callback as string | undefined;
+      const includeProviderToken = req.query.include_provider_token === 'true';
+
       logger.info('Google OAuth initiated', {
         ip: req.ip,
         userAgent: req.get('User-Agent'),
+        isDesktop: desktop,
       });
 
-      passport.authenticate('google', { scope: ['profile', 'email'] })(req, res, next);
+      // Build state parameter with desktop flow information
+      const stateData: OAuthStateData = {};
+      if (desktop) {
+        stateData.desktop = true;
+        stateData.callback = callback;
+        stateData.include_provider_token = includeProviderToken;
+      }
+      const state = Object.keys(stateData).length > 0 ? JSON.stringify(stateData) : undefined;
+
+      passport.authenticate('google', {
+        scope: ['profile', 'email'],
+        state,
+      })(req, res, next);
     } catch (error) {
       next(error);
     }
@@ -155,9 +228,52 @@ export const getAuthRouter = (serviceProvider: ServiceProvider<AppServiceMap>) =
           email: req.user.email,
         });
 
-        // Redirect to frontend with token
+        // Parse state parameter for flow information
+        let stateData: OAuthStateData = {};
+        try {
+          const state = req.query.state as string;
+          if (state) {
+            stateData = JSON.parse(state) as OAuthStateData;
+          }
+        } catch {
+          // Invalid or missing state
+        }
+
         const frontendFqdn = config.get('FRONTEND_FQDN', 'localhost:3000');
         const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
+
+        // Check for desktop flow
+        if (stateData.desktop && stateData.callback) {
+          // Validate callback is localhost
+          try {
+            const callbackUrl = new URL(stateData.callback);
+            if (callbackUrl.hostname !== 'localhost' && callbackUrl.hostname !== '127.0.0.1') {
+              logger.warn('Invalid desktop callback URL - not localhost', {
+                callback: stateData.callback,
+              });
+              return res.status(400).json({ error: 'Invalid callback URL - must be localhost' });
+            }
+
+            // Build redirect URL with token
+            callbackUrl.searchParams.set('token', token);
+
+            // Include provider token if requested
+            if (stateData.include_provider_token && req.user.providerToken) {
+              callbackUrl.searchParams.set('google_token', req.user.providerToken);
+            }
+
+            logger.info('Redirecting to desktop callback', { callback: callbackUrl.toString() });
+            return res.redirect(callbackUrl.toString());
+          } catch (error) {
+            logger.error('Error parsing desktop callback URL', {
+              error,
+              callback: stateData.callback,
+            });
+            return res.status(400).json({ error: 'Invalid callback URL format' });
+          }
+        }
+
+        // Redirect to frontend with token
         const redirectUrl = `${protocol}://${frontendFqdn}/auth/callback?token=${token}`;
         res.redirect(redirectUrl);
       } catch (error) {
@@ -173,12 +289,31 @@ export const getAuthRouter = (serviceProvider: ServiceProvider<AppServiceMap>) =
   router.get('/microsoft', async (req: Request, res: Response, next) => {
     try {
       const logger = await serviceProvider.get('logger');
+
+      // Desktop OAuth parameters
+      const desktop = req.query.desktop === 'true';
+      const callback = req.query.callback as string | undefined;
+      const includeProviderToken = req.query.include_provider_token === 'true';
+
       logger.info('Microsoft OAuth initiated', {
         ip: req.ip,
         userAgent: req.get('User-Agent'),
+        isDesktop: desktop,
       });
 
-      passport.authenticate('microsoft', { scope: ['user.read'] })(req, res, next);
+      // Build state parameter with desktop flow information
+      const stateData: OAuthStateData = {};
+      if (desktop) {
+        stateData.desktop = true;
+        stateData.callback = callback;
+        stateData.include_provider_token = includeProviderToken;
+      }
+      const state = Object.keys(stateData).length > 0 ? JSON.stringify(stateData) : undefined;
+
+      passport.authenticate('microsoft', {
+        scope: ['user.read'],
+        state,
+      })(req, res, next);
     } catch (error) {
       next(error);
     }
@@ -209,9 +344,52 @@ export const getAuthRouter = (serviceProvider: ServiceProvider<AppServiceMap>) =
           email: req.user.email,
         });
 
-        // Redirect to frontend with token
+        // Parse state parameter for flow information
+        let stateData: OAuthStateData = {};
+        try {
+          const state = req.query.state as string;
+          if (state) {
+            stateData = JSON.parse(state) as OAuthStateData;
+          }
+        } catch {
+          // Invalid or missing state
+        }
+
         const frontendFqdn = config.get('FRONTEND_FQDN', 'localhost:3000');
         const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
+
+        // Check for desktop flow
+        if (stateData.desktop && stateData.callback) {
+          // Validate callback is localhost
+          try {
+            const callbackUrl = new URL(stateData.callback);
+            if (callbackUrl.hostname !== 'localhost' && callbackUrl.hostname !== '127.0.0.1') {
+              logger.warn('Invalid desktop callback URL - not localhost', {
+                callback: stateData.callback,
+              });
+              return res.status(400).json({ error: 'Invalid callback URL - must be localhost' });
+            }
+
+            // Build redirect URL with token
+            callbackUrl.searchParams.set('token', token);
+
+            // Include provider token if requested
+            if (stateData.include_provider_token && req.user.providerToken) {
+              callbackUrl.searchParams.set('microsoft_token', req.user.providerToken);
+            }
+
+            logger.info('Redirecting to desktop callback', { callback: callbackUrl.toString() });
+            return res.redirect(callbackUrl.toString());
+          } catch (error) {
+            logger.error('Error parsing desktop callback URL', {
+              error,
+              callback: stateData.callback,
+            });
+            return res.status(400).json({ error: 'Invalid callback URL format' });
+          }
+        }
+
+        // Redirect to frontend with token
         const redirectUrl = `${protocol}://${frontendFqdn}/auth/callback?token=${token}`;
         res.redirect(redirectUrl);
       } catch (error) {

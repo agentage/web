@@ -1,9 +1,17 @@
 import passport from 'passport';
-import { Strategy as GitHubStrategy } from 'passport-github2';
-import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
+import { Profile as GitHubProfile, Strategy as GitHubStrategy } from 'passport-github2';
+import { Profile as GoogleProfile, Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import { Strategy as MicrosoftStrategy } from 'passport-microsoft';
 import type { ConfigService, LoggerService, Service } from '../app.services';
 import type { UserService } from '../user';
+
+// Microsoft profile interface (passport-microsoft doesn't export Profile type)
+interface MicrosoftProfile {
+  id: string;
+  displayName?: string;
+  emails?: Array<{ value: string }>;
+  photos?: Array<{ value: string }>;
+}
 
 export interface OAuthService extends Service {
   /**
@@ -40,9 +48,9 @@ export const createOAuthService = (
               scope: ['user:email'],
             },
             async (
-              _accessToken: string,
+              accessToken: string,
               _refreshToken: string,
-              profile: any,
+              profile: GitHubProfile,
               done: (error: Error | null, user?: Express.User | false) => void
             ) => {
               try {
@@ -71,6 +79,7 @@ export const createOAuthService = (
                   role: userDoc.role,
                   createdAt: userDoc.createdAt,
                   updatedAt: userDoc.updatedAt,
+                  providerToken: accessToken, // Store provider token for desktop flow
                 };
 
                 logger.info('GitHub OAuth successful', {
@@ -107,7 +116,12 @@ export const createOAuthService = (
               callbackURL: googleCallbackUrl,
               scope: ['profile', 'email'],
             },
-            async (_accessToken, _refreshToken, profile, done) => {
+            async (
+              accessToken: string,
+              _refreshToken: string,
+              profile: GoogleProfile,
+              done: (error: Error | null, user?: Express.User | false) => void
+            ) => {
               try {
                 const email = profile.emails?.[0]?.value;
                 if (!email) {
@@ -133,6 +147,7 @@ export const createOAuthService = (
                   role: userDoc.role,
                   createdAt: userDoc.createdAt,
                   updatedAt: userDoc.updatedAt,
+                  providerToken: accessToken, // Store provider token for desktop flow
                 };
 
                 logger.info('Google OAuth successful', {
@@ -175,9 +190,9 @@ export const createOAuthService = (
               scope: ['user.read'],
             },
             async (
-              _accessToken: string,
+              accessToken: string,
               _refreshToken: string,
-              profile: any,
+              profile: MicrosoftProfile,
               done: (error: Error | null, user?: Express.User | false) => void
             ) => {
               try {
@@ -205,6 +220,7 @@ export const createOAuthService = (
                   role: userDoc.role,
                   createdAt: userDoc.createdAt,
                   updatedAt: userDoc.updatedAt,
+                  providerToken: accessToken, // Store provider token for desktop flow
                 };
 
                 logger.info('Microsoft OAuth successful', {
