@@ -7,10 +7,17 @@ import type {
   UpdateAgentMetadataRequest,
 } from '@agentage/shared';
 import { isMarkdownWithFrontmatter, parseAgentMarkdown } from '@agentage/shared';
-import { randomUUID } from 'crypto';
+import { createHash, randomUUID } from 'crypto';
 import * as semver from 'semver';
 import type { LoggerService, Service } from './app.services';
 import type { TypedDb } from './typed-db';
+
+/**
+ * Compute SHA256 hash of content
+ */
+function computeContentHash(content: string): string {
+  return createHash('sha256').update(content, 'utf8').digest('hex');
+}
 
 export interface ListAgentsFilter {
   page: number;
@@ -140,6 +147,9 @@ export function createAgentService(db: TypedDb, logger: LoggerService): AgentSer
         owner: user._id,
       });
 
+      // Compute content hash
+      const contentHash = computeContentHash(data.content);
+
       if (existingAgent) {
         // Publishing new version - verify version is greater
         if (!semver.gt(data.version, existingAgent.latestVersion)) {
@@ -170,6 +180,7 @@ export function createAgentService(db: TypedDb, logger: LoggerService): AgentSer
           agentId: existingAgent._id,
           version: data.version,
           content: data.content,
+          contentHash,
           contentType,
           agentVersion,
           tools,
@@ -188,6 +199,7 @@ export function createAgentService(db: TypedDb, logger: LoggerService): AgentSer
             $set: {
               latestVersion: data.version,
               latestContent: data.content,
+              latestContentHash: contentHash,
               contentType,
               agentVersion,
               tools,
@@ -228,6 +240,7 @@ export function createAgentService(db: TypedDb, logger: LoggerService): AgentSer
           readme: data.readme,
           latestVersion: data.version,
           latestContent: data.content,
+          latestContentHash: contentHash,
           totalDownloads: 0,
           stars: 0,
           forks: 0,
@@ -243,6 +256,7 @@ export function createAgentService(db: TypedDb, logger: LoggerService): AgentSer
           agentId: agentId,
           version: data.version,
           content: data.content,
+          contentHash,
           contentType,
           agentVersion,
           tools,
