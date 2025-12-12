@@ -1,7 +1,7 @@
 import passport from 'passport';
-import { Strategy as GitHubStrategy } from 'passport-github2';
-import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
-import { Strategy as MicrosoftStrategy } from 'passport-microsoft';
+import { Profile as GitHubProfile, Strategy as GitHubStrategy } from 'passport-github2';
+import { Profile as GoogleProfile, Strategy as GoogleStrategy } from 'passport-google-oauth20';
+import { Profile as MicrosoftProfile, Strategy as MicrosoftStrategy } from 'passport-microsoft';
 import type { ConfigService, LoggerService, Service } from '../app.services';
 import type { UserService } from '../user';
 
@@ -42,7 +42,7 @@ export const createOAuthService = (
             async (
               accessToken: string,
               _refreshToken: string,
-              profile: any,
+              profile: GitHubProfile,
               done: (error: Error | null, user?: Express.User | false) => void
             ) => {
               try {
@@ -108,7 +108,12 @@ export const createOAuthService = (
               callbackURL: googleCallbackUrl,
               scope: ['profile', 'email'],
             },
-            async (accessToken, _refreshToken, profile, done) => {
+            async (
+              accessToken: string,
+              _refreshToken: string,
+              profile: GoogleProfile,
+              done: (error: Error | null, user?: Express.User | false) => void
+            ) => {
               try {
                 const email = profile.emails?.[0]?.value;
                 if (!email) {
@@ -179,7 +184,7 @@ export const createOAuthService = (
             async (
               accessToken: string,
               _refreshToken: string,
-              profile: any,
+              profile: MicrosoftProfile,
               done: (error: Error | null, user?: Express.User | false) => void
             ) => {
               try {

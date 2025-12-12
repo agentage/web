@@ -12,6 +12,14 @@ import { createJwtAuthMiddleware } from '../../middleware/jwt-auth.middleware';
 import type { AppServiceMap } from '../../services';
 import type { ServiceProvider } from '../../services/app.services';
 
+// OAuth state data structure
+interface OAuthStateData {
+  device_code?: string;
+  desktop?: boolean;
+  callback?: string;
+  include_provider_token?: boolean;
+}
+
 export const getAuthRouter = (serviceProvider: ServiceProvider<AppServiceMap>) => {
   const router = Router();
 
@@ -51,7 +59,7 @@ export const getAuthRouter = (serviceProvider: ServiceProvider<AppServiceMap>) =
       });
 
       // Build state parameter with all flow information
-      const stateData: any = {};
+      const stateData: OAuthStateData = {};
       if (deviceUserCode) stateData.device_code = deviceUserCode;
       if (desktop) {
         stateData.desktop = true;
@@ -95,11 +103,11 @@ export const getAuthRouter = (serviceProvider: ServiceProvider<AppServiceMap>) =
         });
 
         // Parse state parameter for flow information
-        let stateData: any = {};
+        let stateData: OAuthStateData = {};
         try {
           const state = req.query.state as string;
           if (state) {
-            stateData = JSON.parse(state);
+            stateData = JSON.parse(state) as OAuthStateData;
           }
         } catch {
           // Invalid or missing state
@@ -178,7 +186,7 @@ export const getAuthRouter = (serviceProvider: ServiceProvider<AppServiceMap>) =
       });
 
       // Build state parameter with desktop flow information
-      const stateData: any = {};
+      const stateData: OAuthStateData = {};
       if (desktop) {
         stateData.desktop = true;
         stateData.callback = callback;
@@ -221,11 +229,11 @@ export const getAuthRouter = (serviceProvider: ServiceProvider<AppServiceMap>) =
         });
 
         // Parse state parameter for flow information
-        let stateData: any = {};
+        let stateData: OAuthStateData = {};
         try {
           const state = req.query.state as string;
           if (state) {
-            stateData = JSON.parse(state);
+            stateData = JSON.parse(state) as OAuthStateData;
           }
         } catch {
           // Invalid or missing state
@@ -294,7 +302,7 @@ export const getAuthRouter = (serviceProvider: ServiceProvider<AppServiceMap>) =
       });
 
       // Build state parameter with desktop flow information
-      const stateData: any = {};
+      const stateData: OAuthStateData = {};
       if (desktop) {
         stateData.desktop = true;
         stateData.callback = callback;
@@ -337,11 +345,11 @@ export const getAuthRouter = (serviceProvider: ServiceProvider<AppServiceMap>) =
         });
 
         // Parse state parameter for flow information
-        let stateData: any = {};
+        let stateData: OAuthStateData = {};
         try {
           const state = req.query.state as string;
           if (state) {
-            stateData = JSON.parse(state);
+            stateData = JSON.parse(state) as OAuthStateData;
           }
         } catch {
           // Invalid or missing state
