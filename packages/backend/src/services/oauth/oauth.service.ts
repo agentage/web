@@ -1,9 +1,17 @@
 import passport from 'passport';
 import { Profile as GitHubProfile, Strategy as GitHubStrategy } from 'passport-github2';
 import { Profile as GoogleProfile, Strategy as GoogleStrategy } from 'passport-google-oauth20';
-import { Profile as MicrosoftProfile, Strategy as MicrosoftStrategy } from 'passport-microsoft';
+import { Strategy as MicrosoftStrategy } from 'passport-microsoft';
 import type { ConfigService, LoggerService, Service } from '../app.services';
 import type { UserService } from '../user';
+
+// Microsoft profile interface (passport-microsoft doesn't export Profile type)
+interface MicrosoftProfile {
+  id: string;
+  displayName?: string;
+  emails?: Array<{ value: string }>;
+  photos?: Array<{ value: string }>;
+}
 
 export interface OAuthService extends Service {
   /**
